@@ -1,0 +1,143 @@
+#!/usr/bin/env bash
+#
+# setup — universal installer for Kolbo Skills.
+# Auto-detects Claude Code / Cursor / Codex, prompts for the API key,
+# writes a per-agent MCP config pointing at `npx -y @kolbo/mcp`,
+# and symlinks each kolbo-* skill into the agent's expected skill directory.
+# Idempotent — safe to re-run.
+#
+# Usage:
+#   ./setup                    # auto-detect
+#   ./setup --host claude      # force Claude Code
+#   ./setup --host cursor      # force Cursor
+#   ./setup --host codex       # force Codex
+#   ./setup --api-key kolbo_live_...   # skip the prompt
+#
+set -euo pipefail
+
+HOST=""
+API_KEY="${KOLBO_API_KEY:-}"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --host)    HOST="$2"; shift 2 ;;
+    --api-key) API_KEY="$2"; shift 2 ;;
+    -h|--help)
+      sed -n '2,16p' "$0"; exit 0 ;;
+    *) echo "Unknown flag: $1" >&2; exit 1 ;;
+  esac
+done
+
+REPO_ROOT="$(cd "$(dirname "$0")" && pwd)"
+SKILLS=(kolbo-generate kolbo-creative-director kolbo-marketing-studio kolbo-dtc-ads \
+        kolbo-product-photoshoot kolbo-marketplace-cards kolbo-visual-dna \
+        kolbo-music kolbo-html-artifacts kolbo-transcription kolbo-app-builder)
+
+# --- Detect host ----------------------------------------------------------
+if [[ -z "$HOST" ]]; then
+  if [[ -d "$HOME/.claude" ]];  then HOST="claude"
+  elif [[ -d "$HOME/.cursor" ]];then HOST="cursor"
+  elif [[ -d "$HOME/.codex" ]]; then HOST="codex"
+  else
+    echo "Could not auto-detect host (no ~/.claude, ~/.cursor, or ~/.codex)." >&2
+    echo "Pass --host claude|cursor|codex explicitly." >&2
+    exit 1
+  fi
+fi
+echo "→ Host: $HOST"
+
+case "$HOST" in
+  claude) SKILL_DIR="$HOME/.claude/skills"; MCP_CONFIG="$HOME/.claude/settings.json" ;;
+  cursor) SKILL_DIR="$HOME/.cursor/skills"; MCP_CONFIG="$HOME/.cursor/mcp.json" ;;
+  codex)  SKILL_DIR="$HOME/.codex/skills";  MCP_CONFIG="$HOME/.codex/mcp.json" ;;
+  *) echo "Unsupported host: $HOST" >&2; exit 1 ;;
+esac
+
+mkdir -p "$SKILL_DIR"
+mkdir -p "$(dirname "$MCP_CONFIG")"
+
+# --- Prompt for API key ---------------------------------------------------
+if [[ -z "$API_KEY" ]]; then
+  echo ""
+  echo "Kolbo API key required. Create one at:"
+  echo "  https://app.kolbo.ai/settings/api-keys"
+  echo ""
+  read -r -p "Paste your Kolbo API key (starts with kolbo_live_…): " API_KEY
+  if [[ -z "$API_KEY" ]]; then
+    echo "No key provided — aborting." >&2
+    exit 1
+  fi
+fi
+
+# --- Symlink skills --------------------------------------------------------
+echo ""
+echo "→ Linking skills into $SKILL_DIR"
+for skill in "${SKILLS[@]}"; do
+  SRC="$REPO_ROOT/$skill"
+  DST="$SKILL_DIR/$skill"
+  if [[ ! -d "$SRC" ]]; then
+    echo "  ! source missing: $SRC (skipping)"
+    continue
+  fi
+  if [[ -L "$DST" ]]; then
+    # already a symlink — refresh it
+    rm "$DST"
+  elif [[ -e "$DST" ]]; then
+    echo "  ! $DST exists and is not a symlink — backing up to ${DST}.bak"
+    mv "$DST" "${DST}.bak"
+  fi
+  ln -s "$SRC" "$DST"
+  echo "  ✓ $skill"
+done
+
+# --- Write MCP config ------------------------------------------------------
+# Merge into existing config if it exists; otherwise create a fresh one.
+echo ""
+echo "→ Writing MCP config: $MCP_CONFIG"
+
+NEW_BLOCK=$(cat <<JSON
+{
+  "mcpServers": {
+    "kolbo": {
+      "command": "npx",
+      "args": ["-y", "@kolbo/mcp@latest"],
+      "env": {
+        "KOLBO_API_KEY": "$API_KEY"
+      }
+    }
+  }
+}
+JSON
+)
+
+if [[ -f "$MCP_CONFIG" ]] && command -v jq >/dev/null 2>&1; then
+  TMP=$(mktemp)
+  jq --argjson new "$NEW_BLOCK" '. * $new' "$MCP_CONFIG" > "$TMP" && mv "$TMP" "$MCP_CONFIG"
+  echo "  ✓ Merged Kolbo block into existing config"
+else
+  if [[ -f "$MCP_CONFIG" ]]; then
+    cp "$MCP_CONFIG" "${MCP_CONFIG}.bak"
+    echo "  ! No jq found and existing config detected — backed up to ${MCP_CONFIG}.bak before overwriting"
+  fi
+  echo "$NEW_BLOCK" > "$MCP_CONFIG"
+  echo "  ✓ Wrote fresh config"
+fi
+
+# --- Final verification ----------------------------------------------------
+echo ""
+echo "═══════════════════════════════════════════════════════"
+echo "✓ Kolbo Skills installed for $HOST"
+echo ""
+echo "Restart $HOST to load the new skills + MCP server."
+echo ""
+echo "Try it:"
+echo "  > Generate a minimal test image with Kolbo."
+echo ""
+echo "Skills available (slash-command form for Claude Code):"
+for skill in "${SKILLS[@]}"; do
+  short="${skill#kolbo-}"
+  echo "  /kolbo:$short"
+done
+echo ""
+echo "Docs: https://docs.kolbo.ai/kolbo-code"
+echo "═══════════════════════════════════════════════════════"

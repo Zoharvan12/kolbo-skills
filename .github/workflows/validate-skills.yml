@@ -1,0 +1,158 @@
+name: Validate Kolbo Skills
+
+# Runs on PRs / pushes that touch skill folders, plugin manifests, or VERSION.
+# Enforces:
+#  1. Every kolbo-*/SKILL.md has YAML frontmatter with name matching the folder
+#  2. Frontmatter `version:` matches the repo-wide VERSION file (and all 4 manifest versions)
+#  3. Every references/ link in every SKILL.md resolves to a real file
+#  4. No orphan files in references/ (every file reachable from a SKILL.md)
+#  5. Self-containment: no `../` cross-skill references
+#  6. SKILL.md ≤ 300 lines (warn, don't fail)
+#  7. Brand-rule check: zero foreign-brand mentions in the skill tree or docs.
+#     Source-of-truth pattern is the env var below; ONLY this workflow file
+#     references that string literally, and the grep target excludes
+#     .github/ so this workflow doesn't trip its own check.
+
+on:
+  pull_request:
+    paths:
+      - 'kolbo-*/**'
+      - '.claude-plugin/**'
+      - '.codex-plugin/**'
+      - '.cursor-plugin/**'
+      - 'VERSION'
+      - '.github/workflows/validate-skills.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'kolbo-*/**'
+      - '.claude-plugin/**'
+      - '.codex-plugin/**'
+      - '.cursor-plugin/**'
+      - 'VERSION'
+
+jobs:
+  validate:
+    name: Frontmatter, version, references, self-containment, rebrand
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+
+      - name: Install PyYAML
+        run: pip install pyyaml --quiet
+
+      - name: Brand-rule check — zero foreign-brand mentions (HARD FAIL)
+        env:
+          # Bare pattern of disallowed brand names (case-insensitive, ERE).
+          # Add more as needed; .github/ is excluded from the scan scope so this
+          # workflow file does not trip its own check.
+          DISALLOWED: 'higgsfield'
+        run: |
+          set -euo pipefail
+          if grep -rliE "$DISALLOWED" kolbo-*/ *.md .claude-plugin/ .codex-plugin/ .cursor-plugin/ 2>/dev/null ; then
+            echo ""
+            echo "::error::Found disallowed brand name(s). Rebrand rule: zero matches allowed. Replace with Kolbo equivalents or remove."
+            grep -rniE "$DISALLOWED" kolbo-*/ *.md .claude-plugin/ .codex-plugin/ .cursor-plugin/ 2>/dev/null | head -50
+            exit 1
+          fi
+          echo "✓ Brand-rule check passed — no disallowed brand mentions"
+
+      - name: Frontmatter + name + version + 300-line check (per skill)
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import re, sys, pathlib, yaml
+          repo = pathlib.Path('.')
+          version_file = repo / 'VERSION'
+          version_repo = version_file.read_text().strip() if version_file.exists() else None
+          errors, warnings = [], []
+
+          for skill_dir in sorted(p for p in repo.glob('kolbo-*') if p.is_dir()):
+              skill_name = skill_dir.name
+              skill_md = skill_dir / 'SKILL.md'
+              if not skill_md.exists():
+                  errors.append(f'{skill_md}: missing'); continue
+              text = skill_md.read_text(encoding='utf-8')
+              m = re.match(r'^---\n(.*?)\n---\n', text, re.DOTALL)
+              if not m:
+                  errors.append(f'{skill_md}: no YAML frontmatter'); continue
+              try:
+                  fm = yaml.safe_load(m.group(1))
+              except yaml.YAMLError as e:
+                  errors.append(f'{skill_md}: frontmatter YAML parse: {e}'); continue
+              if fm.get('name') != skill_name:
+                  errors.append(f'{skill_md}: name={fm.get("name")!r}, expected {skill_name!r}')
+              if not str(fm.get('description','')).strip():
+                  errors.append(f'{skill_md}: empty description')
+              v_fm = str(fm.get('version','')).strip()
+              if version_repo and v_fm != version_repo:
+                  errors.append(f'{skill_md}: version={v_fm!r}, expected {version_repo!r} (matches VERSION file)')
+              n_lines = len(text.splitlines())
+              if n_lines > 300:
+                  warnings.append(f'{skill_md}: {n_lines} lines (target ≤ 300)')
+
+          # Cross-check manifest versions
+          import json
+          for mp in ['.claude-plugin/plugin.json', '.claude-plugin/marketplace.json',
+                     '.codex-plugin/plugin.json', '.cursor-plugin/plugin.json']:
+              p = repo / mp
+              if not p.exists():
+                  errors.append(f'{p}: missing'); continue
+              try:
+                  j = json.loads(p.read_text())
+              except Exception as e:
+                  errors.append(f'{p}: JSON parse: {e}'); continue
+              # marketplace.json has nested version
+              if mp.endswith('marketplace.json'):
+                  v = j.get('plugins',[{}])[0].get('version','')
+              else:
+                  v = j.get('version','')
+              if version_repo and v != version_repo:
+                  errors.append(f'{p}: version={v!r}, expected {version_repo!r}')
+
+          for w in warnings: print(f'::warning::{w}')
+          if errors:
+              for e in errors: print(f'::error::{e}')
+              sys.exit(1)
+          print(f'✓ Frontmatter, name, version, line-count OK across all skills + manifests')
+          PY
+
+      - name: Reference link resolution + orphan check + self-containment
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import re, sys, pathlib
+          repo = pathlib.Path('.')
+          errors = []
+
+          for skill_dir in sorted(p for p in repo.glob('kolbo-*') if p.is_dir()):
+              refs_dir = skill_dir / 'references'
+              existing = set()
+              if refs_dir.exists():
+                  for p in refs_dir.rglob('*.md'):
+                      existing.add(str(p.relative_to(skill_dir)).replace('\\','/'))
+              referenced = set()
+              all_md = list(skill_dir.rglob('*.md'))
+              for f in all_md:
+                  text = f.read_text(encoding='utf-8')
+                  for m in re.finditer(r'references/[A-Za-z0-9_\-/]+\.md', text):
+                      referenced.add(m.group(0))
+                  # Self-containment: no `../`
+                  if '../' in text:
+                      errors.append(f'{f}: contains `../` (skills must be self-contained — duplicate shared content instead)')
+              missing = referenced - existing
+              orphans = existing - referenced
+              for p in sorted(missing):
+                  errors.append(f'{skill_dir.name}: link to non-existent file: {p}')
+              for p in sorted(orphans):
+                  errors.append(f'{skill_dir.name}: orphan reference file: {p}')
+
+          if errors:
+              for e in errors: print(f'::error::{e}')
+              sys.exit(1)
+          print('✓ References, orphans, and self-containment OK across all skills')
+          PY

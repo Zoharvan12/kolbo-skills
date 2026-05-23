@@ -1,0 +1,73 @@
+{
+  "name": "kolbo",
+  "description": "Official Kolbo.AI skills package — image/video generation, Marketing Studio (UGC + DTC ads), product photoshoot, marketplace cards, Visual DNA character training, Creative Director multi-scene batches, HTML artifact publishing, App Builder. Bundles the @kolbo/mcp server and routes natural-language requests to the right Kolbo tool.",
+  "owner": {
+    "name": "Kolbo.AI",
+    "url": "https://kolbo.ai"
+  },
+  "plugins": [
+    {
+      "name": "kolbo",
+      "source": "./",
+      "description": "Image/video generation, Marketing Studio, product photoshoot, marketplace cards, Visual DNA, Creative Director, HTML artifacts, App Builder.",
+      "version": "0.4.0",
+      "skills": [
+        {
+          "name": "generate",
+          "path": "kolbo-generate",
+          "invoke": "/kolbo:generate"
+        },
+        {
+          "name": "creative-director",
+          "path": "kolbo-creative-director",
+          "invoke": "/kolbo:creative-director"
+        },
+        {
+          "name": "marketing-studio",
+          "path": "kolbo-marketing-studio",
+          "invoke": "/kolbo:marketing-studio"
+        },
+        {
+          "name": "dtc-ads",
+          "path": "kolbo-dtc-ads",
+          "invoke": "/kolbo:dtc-ads"
+        },
+        {
+          "name": "product-photoshoot",
+          "path": "kolbo-product-photoshoot",
+          "invoke": "/kolbo:product-photoshoot"
+        },
+        {
+          "name": "marketplace-cards",
+          "path": "kolbo-marketplace-cards",
+          "invoke": "/kolbo:marketplace-cards"
+        },
+        {
+          "name": "visual-dna",
+          "path": "kolbo-visual-dna",
+          "invoke": "/kolbo:visual-dna"
+        },
+        {
+          "name": "music",
+          "path": "kolbo-music",
+          "invoke": "/kolbo:music"
+        },
+        {
+          "name": "html-artifacts",
+          "path": "kolbo-html-artifacts",
+          "invoke": "/kolbo:html-artifacts"
+        },
+        {
+          "name": "transcription",
+          "path": "kolbo-transcription",
+          "invoke": "/kolbo:transcription"
+        },
+        {
+          "name": "app-builder",
+          "path": "kolbo-app-builder",
+          "invoke": "/kolbo:app-builder"
+        }
+      ]
+    }
+  ]
+}
