@@ -1,0 +1,50 @@
+{
+  "name": "kolbo",
+  "version": "0.4.0",
+  "description": "Image/video generation, branded UGC + DTC ads via Marketing Studio, 10-mode product photoshoot, Amazon/Shopify marketplace cards, Visual DNA character training, HTML artifact publishing, full React app generation — via Kolbo AI.",
+  "author": {
+    "name": "Kolbo.AI",
+    "email": "support@kolbo.ai",
+    "url": "https://kolbo.ai"
+  },
+  "homepage": "https://kolbo.ai",
+  "repository": "https://github.com/Zoharvan12/kolbo-skills",
+  "license": "MIT",
+  "keywords": [
+    "kolbo",
+    "image-generation",
+    "video-generation",
+    "ugc-ads",
+    "marketing-studio",
+    "product-photoshoot",
+    "marketplace-cards",
+    "visual-dna",
+    "creative-director",
+    "html-artifacts",
+    "app-builder",
+    "ai-content"
+  ],
+  "skills": "./",
+  "interface": {
+    "displayName": "Kolbo AI",
+    "shortDescription": "Generate images, video, music, ads, brand assets, and full apps via Kolbo",
+    "longDescription": "Kolbo AI Skills turn Codex into a creative production agent. Generate high-quality images and videos across 100+ models (Nano Banana, GPT Image 2, Seedance 2, Veo 3.1, Kling, Flux, ...), train reusable Visual DNA characters for face-faithful identity, build branded UGC and DTC ads through Marketing Studio with 9 ad modes, run a 10-mode product photoshoot (studio shot, Pinterest pin, hero banner, ad pack, virtual try-on, conceptual product, restyle, ...), produce marketplace-ready Amazon/Shopify listing cards (main + secondary + A+ content), publish HTML artifacts (presentations, landing pages, dashboards), and ship full React apps via the App Builder. The plugin uses the @kolbo/mcp server for authenticated workflows and returns ready-to-use result URLs.",
+    "developerName": "Kolbo.AI",
+    "category": "Design",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://kolbo.ai",
+    "defaultPrompt": [
+      "Generate a cinematic product image with Kolbo",
+      "Make a 9:16 UGC ad for my new product",
+      "Train a Visual DNA character from these photos",
+      "Create Amazon main + 5 secondary product cards",
+      "Build a landing page for my startup"
+    ],
+    "brandColor": "#FF4D2E",
+    "composerIcon": "./assets/icon.svg",
+    "logo": "./assets/logo.png"
+  }
+}
