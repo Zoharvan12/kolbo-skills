@@ -1,5 +1,5 @@
 {
-  "name": "kolbo",
+  "name": "kolbo-skills",
   "description": "Official Kolbo.AI skills package — image/video generation, Marketing Studio (UGC + DTC ads), product photoshoot, marketplace cards, Visual DNA character training, Creative Director multi-scene batches, HTML artifact publishing, App Builder. Bundles the @kolbo/mcp server and routes natural-language requests to the right Kolbo tool.",
   "owner": {
     "name": "Kolbo.AI",
