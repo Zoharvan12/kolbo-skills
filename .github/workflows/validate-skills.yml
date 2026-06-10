@@ -149,8 +149,10 @@ jobs:
                   text = f.read_text(encoding='utf-8')
                   for m in re.finditer(r'references/[A-Za-z0-9_\-/]+\.md', text):
                       referenced.add(m.group(0))
-                  # Self-containment: no `../`
-                  if '../' in text:
+                  # Self-containment: no `../` traversal. Use a negative lookbehind
+                  # so an ellipsis in a URL (`cdn.kolbo.ai/.../x.jpg`) doesn't read
+                  # as a `../` and false-positive (that kept CI red since day one).
+                  if re.search(r'(?<!\.)\.\./', text):
                       errors.append(f'{f}: contains `../` (skills must be self-contained — duplicate shared content instead)')
               missing = referenced - existing
               orphans = existing - referenced
