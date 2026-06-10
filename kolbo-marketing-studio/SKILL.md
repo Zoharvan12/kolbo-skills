@@ -14,7 +14,7 @@ description: |
 
   Chain: pair with kolbo-visual-dna (presenter face), kolbo-product-photoshoot
   (product photos to upload as references), or kolbo-music (separate music gen
-  to layer in post). Brand-kit lookup auto-reads .kolbo/brand-kits/<slug>.md
+  to layer in post). Brand-kit lookup auto-reads .kolbo/brand-kits/SLUG.md
   if a previous brand-research turn persisted one.
 
   NOT for: brand product IMAGES (use kolbo-product-photoshoot), marketplace
@@ -146,7 +146,7 @@ For ads that feature a specific product:
 3. **Tag with `@image1`** in the prompt.
 4. **Log in `.kolbo/production.md`** under a `### Products` subsection so future ads in the same workspace reuse the same CDN URL (don't re-upload).
 
-If the user gives a **product URL** instead of a photo, do brand research first: `WebFetch` the page to extract title + value prop + hero image URLs + brand colors (hex codes from inline `style=` / `<style>` / linked CSS). Re-host every external image via `upload_media` so it works as a Kolbo CDN reference. Persist the brand identity to `.kolbo/brand-kits/<slug>.md` (slug = lowercased single-token domain) so future generations can reuse without re-scraping.
+If the user gives a **product URL** instead of a photo, do brand research first: `WebFetch` the page to extract title + value prop + hero image URLs + brand colors (hex codes from inline `style=` / `<style>` / linked CSS). Re-host every external image via `upload_media` so it works as a Kolbo CDN reference. Persist the brand identity to `.kolbo/brand-kits/SLUG.md` (slug = lowercased single-token domain) so future generations can reuse without re-scraping.
 
 ## UX Rules
 

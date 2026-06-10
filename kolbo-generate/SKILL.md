@@ -4,8 +4,7 @@ name: kolbo-generate
 description: |
   Generate any image / video / music / TTS / sound / 3D content via the Kolbo AI
   MCP server. Default entry point for generic "make me X" requests across
-  100+ models (GPT Image 2, Nano Banana 2/Pro, Seedance 2, Veo 3/3.1, Kling,
-  Flux, Sora, Hailuo, Suno, ElevenLabs, DeepDub, ...).
+  100+ models (GPT Image, Nano Banana, Seedance, Veo, Kling, Flux, Suno, ...).
 
   Use when: "generate", "create", "make me a", "edit", "animate", "transcribe",
   any model name by itself (Flux, Kling, Suno, etc.), generic single-output
@@ -19,9 +18,8 @@ description: |
   NOT for: 2+ related outputs (use kolbo-creative-director), branded ad video
   (use kolbo-marketing-studio), brand product imagery (use kolbo-product-photoshoot),
   marketplace cards (use kolbo-marketplace-cards), HTML artifacts (use
-  kolbo-html-artifacts), full React apps (use kolbo-app-builder), video editing /
-  FFmpeg (use the video-production skill, not this one).
-argument-hint: "[prompt-or-command] [--model <name>] [--image <path>] [--video <path>]"
+  kolbo-html-artifacts), full React apps (use kolbo-app-builder).
+argument-hint: "[prompt-or-command] [--model NAME] [--image <path>] [--video <path>]"
 allowed-tools: Bash, Read, Write, Edit
 ---
 

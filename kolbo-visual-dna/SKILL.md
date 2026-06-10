@@ -15,7 +15,7 @@ description: |
   Chain: train Visual DNA (one-time, returns vdna_id) → use in
   kolbo-generate / kolbo-creative-director / kolbo-marketing-studio /
   kolbo-product-photoshoot / kolbo-marketplace-cards via `visual_dna_ids: ["..."]`
-  with the `@<name>` tag in the prompt.
+  with the `@NAME` tag in the prompt.
 
   NOT for: one-shot face swaps (use kolbo-generate with `source_images`),
   named real public figures (refuses on policy), one-time edits without
@@ -61,7 +61,7 @@ A Visual DNA captures the "identity" of a character, style, product, or scene fr
    - These two generated images give the DNA engine multi-angle coverage and dramatically improve identity consistency.
 5. **Submit.** `create_visual_dna({ name, type, images: [<4-angle sheet URL>, <close-up URL>, ...user's reference paths/URLs] })`. Up to 4 images total — if the user gave more than 2, pick the 2 most representative or ask which to keep.
 6. **Capture `vdna_id`** from the response.
-7. **Deliver.** "Visual DNA `<name>` ready. Use it in any generation by passing `visual_dna_ids: [\"<vdna_id>\"]` and writing `@<name>` in the prompt."
+7. **Deliver.** "Visual DNA `NAME` ready. Use it in any generation by passing `visual_dna_ids: [\"<vdna_id>\"]` and writing `@NAME` in the prompt."
 
 **Skip step 4 only if:** the user explicitly says "just use my image as-is" OR they provided 3+ reference images already covering multiple angles.
 
@@ -163,8 +163,8 @@ Fields to read for image source (first one present): `thumbnail`, `thumbnail_url
 
 ## UX Rules
 
-1. Be concise. No raw IDs in chat — just say "Visual DNA `<name>` ready" with a friendly reference.
+1. Be concise. No raw IDs in chat — just say "Visual DNA `NAME` ready" with a friendly reference.
 2. Detect language and respond in it. CLI flags and `@name` tags stay in the form they were stored.
 3. Ask for the smallest set of inputs: name + photos. Pick a sensible type default (character).
 4. Polling is silent — training takes ~30s. Don't repeat status updates.
-5. After delivery, suggest one concrete next call: "Want to use `@<name>` in a UGC ad now? (kolbo-marketing-studio)"
+5. After delivery, suggest one concrete next call: "Want to use `@NAME` in a UGC ad now? (kolbo-marketing-studio)"

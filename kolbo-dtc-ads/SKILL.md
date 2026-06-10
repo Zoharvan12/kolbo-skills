@@ -11,14 +11,14 @@ description: |
   "us vs them comparison", "DTC ad image", "branded ad creative",
   "make me an ad image", "ad for [brand]", "[brand]-style ad creative".
 
-  Chain: optional brand-kit lookup (.kolbo/brand-kits/<slug>.md), pair with
+  Chain: optional brand-kit lookup (.kolbo/brand-kits/SLUG.md), pair with
   kolbo-visual-dna for a specific presenter, kolbo-product-photoshoot for the
   product hero, or kolbo-creative-director for multi-variant ad packs.
 
   NOT for: ad VIDEO (use kolbo-marketing-studio), product photography
   without ad-format structure (use kolbo-product-photoshoot), marketplace
   listings (use kolbo-marketplace-cards).
-argument-hint: "[format] [brief] [--brand-kit <slug>] [--avatar <vdna_id>] [--product <path>]"
+argument-hint: "[format] [brief] [--brand-kit SLUG] [--avatar <vdna_id>] [--product <path>]"
 allowed-tools: Bash, Read, Write, Edit
 ---
 
@@ -47,7 +47,7 @@ You don't need all 5. The minimum is: a **prompt** + an **ad format**. Everythin
 
 ```
 1. Pick an ad format     → ask user (labeled options, never auto-pick)
-2. Pick / build brand kit → workflows/research-first.md persists to .kolbo/brand-kits/<slug>.md
+2. Pick / build brand kit → workflows/research-first.md persists to .kolbo/brand-kits/SLUG.md
 3. Attach avatar          → workflows/visual-dna.md ("character" type DNA)
 4. Attach product         → upload_media → reference_images
 5. Attach reference media → upload_media → reference_images (up to ~14 total)
@@ -75,14 +75,14 @@ When the user says "make me an ad" without naming a format, offer 3 of these in 
 
 ## Brand Kit Reuse
 
-If `.kolbo/brand-kits/<slug>.md` exists for the brand (see the brand-research routine (WebFetch the brand URL → extract palette + fonts + hero images → re-host via `upload_media` → persist to `.kolbo/brand-kits/<slug>.md`)), **Read it first** and pull `primary_color`, `accent_color`, `text_color`, `bg_color`, `fonts`, `tone`, `target_user`, `logo_url`. Bake these into the prompt:
+If `.kolbo/brand-kits/SLUG.md` exists for the brand (see the brand-research routine (WebFetch the brand URL → extract palette + fonts + hero images → re-host via `upload_media` → persist to `.kolbo/brand-kits/SLUG.md`)), **Read it first** and pull `primary_color`, `accent_color`, `text_color`, `bg_color`, `fonts`, `tone`, `target_user`, `logo_url`. Bake these into the prompt:
 
 - Exact hex codes for every color (`#FF4D2E` not "orange")
 - Named fonts (`Inter Bold for headline, Inter Regular for body`)
 - Tone descriptors from `### Voice & Audience`
 - Logo as `reference_images[0]` with `@image1` reference in the prompt ("place logo from `@image1` top-left at 8% width, no recolor")
 
-If no brand kit exists and the user gives a brand URL, run the brand-research routine (WebFetch the brand URL → extract palette + fonts + hero images → re-host via `upload_media` → persist to `.kolbo/brand-kits/<slug>.md`) to build one. Then come back here.
+If no brand kit exists and the user gives a brand URL, run the brand-research routine (WebFetch the brand URL → extract palette + fonts + hero images → re-host via `upload_media` → persist to `.kolbo/brand-kits/SLUG.md`) to build one. Then come back here.
 
 ## Avatar Workflow
 
@@ -100,7 +100,7 @@ For ads featuring a specific product:
 | User provides | Do |
 |---|---|
 | **Product photo** (local file or URL) | `upload_media({ source })` → tag as `@image1` in prompt → log to `.kolbo/production.md` under `### Products` |
-| **Product URL only** (no photo) | Run the brand-research routine (WebFetch the brand URL → extract palette + fonts + hero images → re-host via `upload_media` → persist to `.kolbo/brand-kits/<slug>.md`) first to scrape hero images + brand palette; re-host via `upload_media` → use Kolbo CDN URL |
+| **Product URL only** (no photo) | Run the brand-research routine (WebFetch the brand URL → extract palette + fonts + hero images → re-host via `upload_media` → persist to `.kolbo/brand-kits/SLUG.md`) first to scrape hero images + brand palette; re-host via `upload_media` → use Kolbo CDN URL |
 | **Multiple angles** | Upload all in parallel (one `upload_media` call each) → pass all in `reference_images` → tag `@image1`, `@image2`, … per the `kolbo-visual-dna` skill reference-tagging rules |
 | **Nothing — text only** | Ask once: "Do you have a product photo? It dramatically improves fidelity." If they say no, proceed text-only but warn quality may be lower |
 
@@ -149,7 +149,7 @@ Default-to-cheapest when the user hasn't expressed a quality intent and the diff
 
 1. **Always pick an ad format explicitly** with the user — never auto-pick.
 2. **Always confirm aspect ratio + resolution + quantity** before firing.
-3. **Always check for a brand kit** before scraping fresh — `Read .kolbo/brand-kits/<slug>.md` first.
+3. **Always check for a brand kit** before scraping fresh — `Read .kolbo/brand-kits/SLUG.md` first.
 4. **Always log products + brand kits in `.kolbo/production.md`** so future ads reuse instead of re-uploading / re-scraping.
 5. **No auto-retry on failure** — surface the reason and let the user adjust.
 6. **Strict NO uninvited additions** in every ad prompt: "NO captions, NO subtitles, NO watermarks, NO extra text beyond what's specified."

@@ -86,8 +86,16 @@ jobs:
                   errors.append(f'{skill_md}: frontmatter YAML parse: {e}'); continue
               if fm.get('name') != skill_name:
                   errors.append(f'{skill_md}: name={fm.get("name")!r}, expected {skill_name!r}')
-              if not str(fm.get('description','')).strip():
+              desc = str(fm.get('description','')).strip()
+              if not desc:
                   errors.append(f'{skill_md}: empty description')
+              # HARD LIMIT: Claude Code SILENTLY REJECTS a skill whose description
+              # exceeds 1024 chars (files install fine but the skill never loads).
+              if len(desc) > 1024:
+                  errors.append(f'{skill_md}: description is {len(desc)} chars > 1024 — Claude Code silently rejects it (skill never loads). Shorten it.')
+              # Angle brackets read as XML tags and can get the skill rejected.
+              if '<' in desc or '>' in desc:
+                  errors.append(f'{skill_md}: description contains < or > (reads as an XML tag — can be rejected). Use a plain placeholder like SLUG/NAME.')
               v_fm = str(fm.get('version','')).strip()
               if version_repo and v_fm != version_repo:
                   errors.append(f'{skill_md}: version={v_fm!r}, expected {version_repo!r} (matches VERSION file)')

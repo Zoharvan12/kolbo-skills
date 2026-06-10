@@ -10,10 +10,9 @@ description: |
   Use when: "product photo", "studio shot", "lifestyle image", "Pinterest pin",
   "hero/banner", "carousel", "ad creative", "Meta ads", "virtual try-on",
   "model wearing", "person holding product", "closeup with hands",
-  "levitating/floating/splash product", "CGI/surreal product", "restyle",
-  "seasonal/aesthetic variation", or any product/brand/paid-social creative.
+  "CGI/surreal product", "restyle", or any product/brand/paid-social creative.
 
-  Chain: optional brand-kit lookup (.kolbo/brand-kits/<slug>.md), pair with
+  Chain: optional brand-kit lookup (.kolbo/brand-kits/SLUG.md), pair with
   kolbo-visual-dna for character locks (virtual_model_tryout, closeup with face),
   multi-output modes (social_carousel, ad_creative_pack) auto-route to
   kolbo-creative-director.
@@ -104,7 +103,7 @@ Pick the question stack based on user state:
 1. **How many?** `[1 / 3 / 5]`
 2. **What style/mood?** `[Clean studio / Lifestyle / Conceptual / With a model / Other]`
 3. **Where will you use them?** `[Shopify / Instagram / Pinterest / Paid ads / Website hero]`
-4. **Brand colors to match?** (skip if a brand kit exists at `.kolbo/brand-kits/<slug>.md`)
+4. **Brand colors to match?** (skip if a brand kit exists at `.kolbo/brand-kits/SLUG.md`)
 
 ### Type B — Uploaded a product photo + named a use case
 
@@ -149,10 +148,10 @@ After answers → return to the relevant Type A–E.
 
 ## Brand Kit Integration
 
-Before any generation, check if `.kolbo/brand-kits/<slug>.md` exists for the brand:
+Before any generation, check if `.kolbo/brand-kits/SLUG.md` exists for the brand:
 
 - **Exists** → Read it. Pull `primary_color`, `accent_color`, `fonts`, `logo_url`. Bake hex codes + named fonts into the prompt. Pass the logo as `reference_images[0]` if relevant.
-- **Doesn't exist** but user gave a brand URL → run brand research first (WebFetch the URL → extract palette + fonts + hero images → re-host via `upload_media` → write `.kolbo/brand-kits/<slug>.md`).
+- **Doesn't exist** but user gave a brand URL → run brand research first (WebFetch the URL → extract palette + fonts + hero images → re-host via `upload_media` → write `.kolbo/brand-kits/SLUG.md`).
 - **Doesn't exist** and user gave no URL → Proceed without; ask in Type A's question 4 if relevant.
 
 ## Multi-Variant Strategy
@@ -180,7 +179,7 @@ For `social_carousel` / `ad_creative_pack` (multi-output by design):
 1. **Pick the mode by intent**, not surface keyword. The user saying "Pinterest" → `moodboard_pin` regardless of what's IN the image.
 2. **Ask at most 4 labeled-option questions** before generating. Skip any question whose answer is obvious.
 3. **Always confirm aspect ratio + resolution + count** before firing — they materially change output and cost.
-4. **Reuse brand kits** — Read `.kolbo/brand-kits/<slug>.md` before generating.
+4. **Reuse brand kits** — Read `.kolbo/brand-kits/SLUG.md` before generating.
 5. **Strict NO uninvited additions** — "NO captions, NO subtitles, NO watermarks, NO extra text beyond what's specified" in every prompt.
 6. **No auto-retry on failure** — surface and let the user adjust.
 
