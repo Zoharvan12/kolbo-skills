@@ -2,7 +2,7 @@
   "mcpServers": {
     "kolbo": {
       "command": "npx",
-      "args": ["-y", "@kolbo/mcp"],
+      "args": ["-y", "@kolbo/mcp@latest"],
       "env": {
         "KOLBO_API_KEY": "${user_config.api_key}",
         "KOLBO_API_URL": "${user_config.api_endpoint}"
