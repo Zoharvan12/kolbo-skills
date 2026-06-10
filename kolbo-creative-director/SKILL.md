@@ -11,8 +11,7 @@ description: |
   moods, settings, frames]", "show the character in N different ___",
   "create a storyboard / ad campaign / product set", "key frames for a video",
   "8 angles of this character", "ad pack with 4 variants",
-  "campaign batch", "lookbook", "scene 1 scene 2 scene 3", "video auto pilot",
-  "photo auto pilot", "cinema manual first/last frame scenes".
+  "campaign batch", "lookbook", "scene 1 scene 2 scene 3".
 
   Chain: pair with kolbo-visual-dna (lock character across scenes), then optionally
   with kolbo-generate (animate each frame via generate_video_from_image).

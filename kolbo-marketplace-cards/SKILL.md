@@ -12,7 +12,7 @@ description: |
   "what's in the box image", "marketplace image set", "full Amazon set",
   "main + secondary + A+", "Walmart listing", "Etsy listing".
 
-  Chain: optional brand-kit lookup (.kolbo/brand-kits/<slug>.md), routes
+  Chain: optional brand-kit lookup (.kolbo/brand-kits/SLUG.md), routes
   bundles through kolbo-creative-director under the hood, pair with
   kolbo-product-photoshoot for additional non-listing brand imagery.
 
@@ -79,7 +79,7 @@ For **single `main` image** or **custom subset** of ≤ 2 assets: `generate_imag
 
 For **multi-angle** specifically: this is one image with a 4-up grid composition — use `generate_image` with a prompt describing the 2×2 layout, NOT `generate_creative_director`. (Or alternatively, fire 4 separate `generate_image` calls and composite the grid yourself — depends on user preference.)
 
-**Always pass the product photo** as `reference_images` for every call. `@image1` references it in the prompt. If the user gave a URL instead of a photo, do brand-research first: WebFetch the URL → extract product hero images → re-host every external image via `upload_media` → use the Kolbo CDN URLs in `reference_images`. Persist brand identity to `.kolbo/brand-kits/<slug>.md` for reuse.
+**Always pass the product photo** as `reference_images` for every call. `@image1` references it in the prompt. If the user gave a URL instead of a photo, do brand-research first: WebFetch the URL → extract product hero images → re-host every external image via `upload_media` → use the Kolbo CDN URLs in `reference_images`. Persist brand identity to `.kolbo/brand-kits/SLUG.md` for reuse.
 
 ## Main Image Compliance Rules (HARD)
 
@@ -130,7 +130,7 @@ For dense-text modules (`aplus_features`, `aplus_pain_points`, `aplus_efficacy`,
 
 ## Brand Kit Reuse
 
-Check `.kolbo/brand-kits/<slug>.md` before generating. Pull `primary_color`, `accent_color`, `text_color`, `bg_color`, `fonts`. Bake into every A+ module prompt — marketplace pages live or die on visual consistency across the 13 assets.
+Check `.kolbo/brand-kits/SLUG.md` before generating. Pull `primary_color`, `accent_color`, `text_color`, `bg_color`, `fonts`. Bake into every A+ module prompt — marketplace pages live or die on visual consistency across the 13 assets.
 
 ## Pre-Generation Interview
 
@@ -138,7 +138,7 @@ Ask 2–3 short labeled questions before firing:
 
 1. **Which marketplace?** `[Amazon US / Amazon EU / Shopify / Etsy / eBay / Walmart / Other]` — affects compliance rules
 2. **Which bundle?** `[main / product-images / aplus / full-set / custom subset]`
-3. **Brand kit?** Auto-detect from `.kolbo/brand-kits/<slug>.md`; otherwise ask if brand colors / fonts should be applied
+3. **Brand kit?** Auto-detect from `.kolbo/brand-kits/SLUG.md`; otherwise ask if brand colors / fonts should be applied
 
 Skip questions whose answer is obvious from the request.
 
@@ -168,7 +168,7 @@ If the user already has an approved `main_image` from a prior session and wants 
 
 1. **Always ask which marketplace** — compliance rules vary.
 2. **Strict compliance prompts on main_image** — explicit NO text / NO props / NO models / NO borders.
-3. **Always reuse brand kit** — Read `.kolbo/brand-kits/<slug>.md` first; pass palette + fonts to every A+ module.
+3. **Always reuse brand kit** — Read `.kolbo/brand-kits/SLUG.md` first; pass palette + fonts to every A+ module.
 4. **Recommend GPT Image 2 + 2K/4K for dense-text A+ modules** — Nano Banana renders text well but GPT Image 2 wins at multi-line technical layouts.
 5. **For bundles, always use `generate_creative_director`** — never fire 13 parallel `generate_image` calls.
 6. **Log everything to `.kolbo/production.md`** — marketplace listings get updated quarterly; reuse beats regenerate.
