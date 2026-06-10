@@ -30,7 +30,7 @@
     "api_key": {
       "type": "string",
       "title": "Kolbo API Key",
-      "description": "Your Kolbo API key. Create one at https://app.kolbo.ai/settings/api-keys",
+      "description": "Your Kolbo API key. Create one at https://app.kolbo.ai/developer",
       "sensitive": true,
       "required": true
     },
