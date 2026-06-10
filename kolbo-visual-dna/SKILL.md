@@ -149,9 +149,9 @@ When you display `list_visual_dnas`, render each item's thumbnail as a markdown 
 ```
 Visual DNAs (6):
 1. **Maya** — `vdna_abc` (character)
-   ![Maya](https://cdn.kolbo.ai/.../maya-thumb.jpg)
+   ![Maya](https://cdn.kolbo.ai/visual-dna/maya-thumb.jpg)
 2. **Tokyo Neon** — `vdna_xyz` (style)
-   ![Tokyo Neon](https://cdn.kolbo.ai/.../tokyo-thumb.jpg)
+   ![Tokyo Neon](https://cdn.kolbo.ai/visual-dna/tokyo-thumb.jpg)
 ```
 
 Fields to read for image source (first one present): `thumbnail`, `thumbnail_url`, `preview_url`, `url`, `image`.
