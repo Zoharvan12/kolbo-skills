@@ -110,7 +110,7 @@ Models reject prompts that trigger NSFW or IP detection. Avoid:
 - Trademarks / branded characters by name (use generic descriptors)
 - Copyrighted material verbatim (style references are fine: "in the style of Studio Ghibli")
 
-When a prompt is refused on policy grounds, **do not retry the same prompt**. Rephrase the sensitive part and resubmit. See the troubleshooting reference (`references/workflows/troubleshooting.md` from this skill's root) for failure-envelope rules.
+When a prompt is refused on policy grounds, **do not retry the same prompt**. Rephrase the sensitive part and resubmit. See `workflows/troubleshooting.md` failure-envelope rules.
 
 ## Style
 
@@ -122,12 +122,12 @@ If during the conversation it becomes clear the user is actually working with on
 
 | User mentions / asks for | Switch to |
 |---|---|
-| Seedance / Seedance 2 / Bytedance video | `models/seedance.md` (in this same skill) |
-| GPT Image 2 / gpt-image-2 / OpenAI image | `models/gpt-image.md` (in this same skill) |
-| Nano Banana / Gemini image / Gemini 3 Pro Image | `models/nano-banana.md` (in this same skill) |
-| Veo / Veo 3 / Veo 3.1 / Google video | `models/veo.md` (in this same skill) |
-| Multi-scene set / storyboard / "8 angles" / campaign batch | the `kolbo-creative-director` skill |
-| Suno / song / lyrics / jingle / soundtrack | the `kolbo-music` skill |
-| HTML presentation / slide deck | the `kolbo-html-artifacts` skill (sub-mode: presentation) |
-| Landing page / marketing site | the `kolbo-html-artifacts` skill (sub-mode: landing-page) |
-| Dashboard / data viz / interactive widget / game | the `kolbo-html-artifacts` skill (sub-mode: visual-code) |
+| Seedance / Seedance 2 / Bytedance video | `models/seedance.md` |
+| GPT Image 2 / gpt-image-2 / OpenAI image | `models/gpt-image.md` |
+| Nano Banana / Gemini image / Gemini 3 Pro Image | `models/nano-banana.md` |
+| Veo / Veo 3 / Veo 3.1 / Google video | `models/veo.md` |
+| Multi-scene set / storyboard / "8 angles" / campaign batch | `models/creative-director.md` |
+| Suno / song / lyrics / jingle / soundtrack | `models/music.md` |
+| HTML presentation / slide deck | `models/html-presentation.md` |
+| Landing page / marketing site | `models/landing-page.md` |
+| Dashboard / data viz / interactive widget / game | `models/visual-code.md` |

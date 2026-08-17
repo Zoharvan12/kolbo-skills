@@ -1,5 +1,5 @@
 ---
-version: 0.4.0
+version: 0.8.4
 name: kolbo-generate
 description: |
   Generate any image / video / music / TTS / sound / 3D content via the Kolbo AI
@@ -23,11 +23,10 @@ argument-hint: "[prompt-or-command] [--model NAME] [--image <path>] [--video <pa
 allowed-tools: Bash, Read, Write, Edit
 ---
 
-# Kolbo Generate — Catch-All Generation Entry Point
+<!-- AUTO-GENERATED from kolbo-code packages/opencode/skills/kolbo — DO NOT EDIT.
+     Edit the canonical skill and let .github/workflows/sync-skill-to-plugin.yml regenerate this. -->
 
-Direct access to the Kolbo AI creative platform via MCP tools. Use them to generate and deliver real content — do NOT just describe what you would create.
-
-> 🚫 **Don't dump generated URLs as bare text or markdown links in chat** — the UI renders artifacts as a gallery tile + canvas. Refer by description ("the rainy scene"), store URLs in `.kolbo/production.md`. INLINE `![](url)` images ARE allowed for catalog-style replies (per-item thumbs in numbered lists).
+# Kolbo Generate — Image, Video, Music, Speech, Sound, 3D
 
 ## Step 0 — Bootstrap
 
@@ -35,73 +34,159 @@ Once per conversation, before any other Kolbo tool call:
 
 1. **Run `check_credits`.** If it fails with "Session expired" / "Not authenticated", ask the user to run `kolbo auth login` (or their branded CLI command like `sapir auth login`) and reload the editor.
 2. **If `list_models` returns empty**, MCP isn't wired — same fix.
-3. Remember the credit balance for the session; don't re-check every turn.
+3. Use the balance ONLY for the low-balance check at this moment. **Never quote a "credits remaining" number later in the session** — coding/chat usage also deducts credits, so any remembered or computed balance is stale. Report only what each generation cost (`credits_used`); if the user asks what's left, run `check_credits` fresh right then.
 
-## Routing — Read These on Demand
+If the user is on a whitelabel build (`sapir`, etc.), they must use their branded command — not `kolbo`. See `references/workflows/troubleshooting.md`.
 
-| If the user wants… | Read first |
-|---|---|
-| Seedance 2 video | `references/models/seedance.md` |
-| GPT Image 2 image | `references/models/gpt-image.md` |
-| Nano Banana / Gemini image | `references/models/nano-banana.md` |
-| Veo 3 / 3.1 video | `references/models/veo.md` |
-| Any other generation model (Flux, Kling, Sora, Hailuo, ElevenLabs, …) + universal prompt-engineering basics | `references/models/prompt-copilot.md` |
-| Confirm cost / validate aspect / resolution / duration against model caps | `references/workflows/cost-and-validation.md` |
-| Start or continue a multi-step production | `references/workflows/production-log.md` |
-| Browse, manage, or present existing media library items | `references/workflows/media-library.md` |
-| Auth / MCP / 429 issue | `references/workflows/troubleshooting.md` |
-| 2+ related outputs (storyboard, campaign batch, multi-angle) | → switch to the `kolbo-creative-director` skill |
-| Visual DNA / character consistency / `@name` syntax | → switch to the `kolbo-visual-dna` skill |
-| UGC ad / TV spot / branded video | → switch to `kolbo-marketing-studio` |
-| Composed DTC ad images | → switch to `kolbo-dtc-ads` |
-| Brand product imagery (Pinterest / hero banner / ad pack) | → switch to `kolbo-product-photoshoot` |
-| Amazon / Shopify marketplace cards | → switch to `kolbo-marketplace-cards` |
-| Music (Suno + variants) | → switch to `kolbo-music` |
-| HTML presentations / landing pages / dashboards | → switch to `kolbo-html-artifacts` |
-| Transcription / audio + video analysis | → switch to `kolbo-transcription` |
-| Full React app generation | → switch to `kolbo-app-builder` |
+## 🎬 Confirm the Creative Brief BEFORE Generating (CRITICAL — read first)
 
-## Available MCP Tools (51 total)
+Never fire a paid generation the moment the user says "make X". First **present the brief back as a confirmation the user can change** — this is the single most important interaction. It gives the user control over what gets created and what it costs, instead of silently spending credits on defaults.
+
+**Before ANY paid image / video / music / speech / 3D generation**, unless the user has *explicitly* dictated every key parameter in this message, ask ONE labeled question (the UI renders it as an options card) confirming:
+
+- **Model** — your recommended pick as the default option, plus 1–2 alternatives (with their credit cost).
+- **Aspect ratio** — e.g. `1:1 / 9:16 / 16:9` (offer the sensible default first).
+- **Count** — how many (1 / 4 / …).
+- **Resolution / quality / duration** — where the model supports it.
+- **Creative direction** — style / mood / scene, when the user was vague ("4 cats" → offer style options: photoreal / illustrated / cinematic / surprise-me).
+- **Credit cost** — state the total (`✦ N credits`) right in the question so cost is never a surprise.
+
+Then generate **only** with the confirmed parameters. If the user changes an option, use the change. This mirrors the approval-card flow: propose → let them adjust → confirm → generate.
+
+**Only skip the brief confirmation when** the user's message already pins model + aspect + count + creative direction (e.g. "generate 4 photoreal tabby cats, 1:1, z-image/turbo") — then just state the cost one-liner and fire. A low credit cost is **not** a reason to skip: cheap ≠ no-confirmation. What matters is whether the user actually chose the parameters.
+
+For multi-scene / batch work this pairs with `generate_creative_director` (see below) — still confirm the brief first.
+
+## ⚠️ Visual DNA `@Name` in the prompt (HARD RULE — always on)
+
+Passing `visual_dna_ids` is **not enough**. For every DNA in that array you MUST also write `@ExactStoredName` in the prompt text (the `name` from `list_visual_dnas` / `create_visual_dna`). The engine binds identity by parsing `@tags`. No `@tag` → the DNA is wasted.
+
+- Right: `visual_dna_ids: ["vdna_…"]` + prompt `@Zohar walks into frame`
+- Wrong: `Zohar's`, `Zohar`, `the left man`, `the man on the LEFT`, `Visual DNA anchors: the man on the LEFT…` — none of these bind
+- Never invent a role label or possessive as a substitute for `@Name`
+- Same rule for moodboards: `#ExactBoardName`
+
+Resolve names with `list_visual_dnas` first. Full binding rules: `references/workflows/visual-dna.md`.
+
+## 📁 Projects — Where Work Lands (CRITICAL)
+
+Everything in Kolbo — sessions, generations, media, docs — lives inside a PROJECT. Getting this wrong is the #1 user complaint ("my work went to the wrong project").
+
+1. **User names a project** ("in my Acme project", "for the film") → call `list_projects` ONCE to resolve the name to an ObjectId, then pass that **same** id as `project_id` on **EVERY** subsequent `generate_*` / `upload_media` / `create_doc` / `chat_send_message` call in **this conversation**. There is no server-side sticky store — omitting it on any later call silently lands in the default "API Generations" bucket (`is_default: true`). Once resolved, treat that id as required for the rest of the conversation. Accounts often hold hundreds of projects, so pass `list_projects({ search: "acme" })` rather than listing everything; the list is paginated (50/page) and hides archived projects unless you pass `include_archived: true`.
+2. **No project mentioned** → omit `project_id`; the default bucket is correct. Don't ask unless intent is ambiguous. If `list_sessions` already returned a `project_id` for the work you are continuing, keep passing that id.
+3. **Work landed in the wrong project? MOVE it, never regenerate**: `move_session` relocates a whole session + all its media (works for any session type — the `session_id` from generation responses, chats, transcriptions); `move_media` / `bulk_move_media` / `move_folder_contents` relocate individual media items. Empty leftover sessions after a move: `delete_session` (soft-delete; `restore_session` undoes it). `rename_session` only changes the sidebar title.
+
+## Cost Awareness — Quick Rules
+
+Full tables + formulas in `references/workflows/cost-and-validation.md`. Quick rules:
+
+- **Skip the brief/cost confirmation ONLY** when the user's message already pins model + count + aspect + creative direction (see "Confirm the Creative Brief" above). Low cost alone is **not** a reason to skip — cheap generations still get the one labeled confirmation unless the user chose the parameters.
+- **Otherwise confirm** via the labeled-question card: the parameters + the credit cost, suggest a cheaper alternative if one fits, wait for the user's pick. Never fire on defaults the user didn't choose.
+- **Batch totalling 100+ credits**: run `check_credits` first.
+- **Quote real cost**: after firing, log `credits_used` (from the tool result) to `.kolbo/production.md` — never `base × count`.
+- **Never state "credits remaining" from arithmetic** (opening balance − generation costs). Coding/chat usage deducts credits too, so the math is always wrong. Report cost only; if the user asks for their balance, call `check_credits` fresh at that moment.
+
+## 🛑 Runaway-Loop Guard — ONE Generation per Requested Item (CRITICAL)
+
+When the user asks for **one specific change**, the answer is **a single tool call**. After URLs return, **stop**. Surface and wait.
+
+You are NOT allowed to:
+- Fire the same tool 3+ times in a single turn unless the user explicitly asked for "N variations".
+- Re-fire because you think the result might not be exactly what the user wanted.
+- Auto-retry on success.
+- Fire 5+ parallel `generate_video*` calls speculatively.
+
+**Only re-fire when:** user explicitly asked for variations with a count, OR previous call returned `failure.retryable === true` (ONE retry), OR previous call returned `completed` but `urls.length === 0` (ONE retry).
+
+## ⚠️ Detecting Failed Generations (CRITICAL)
+
+A generation can fail three ways. Treat ALL as failure:
+
+1. **Tool returns `error`** — explicit. Surface, suggest retry, log `generation_id`.
+2. **Tool returns `completed` but `urls` is empty** — silent failure (NSFW filter, model OOM, upstream 5xx). Tell user "completed without an output — retrying" and re-fire ONCE. Do NOT log to `.kolbo/production.md`. Do NOT claim it worked.
+3. **Tool hangs / never returns** — MCP poll timed out. Call `get_generation_status(generation_id, wait=true)` IMMEDIATELY. The server might be done.
+
+**Always:**
+- Don't celebrate before reading the result. Verify `urls` is non-empty.
+- Don't auto-retry without surfacing the failure. Partial batches: list failed items + reasons + successful count. Never "✅ all done!" on partials.
+- Don't log failed items to `.kolbo/production.md`. Only successes.
+- Surface the user's count. "6 of 8 ready", not "videos ready".
+
+`failure` envelope structure + retry rules: `references/workflows/troubleshooting.md`.
+
+## ⚠️ Generated URLs in Chat (CRITICAL)
+
+Chat renders markdown natively. `![alt](url)` = inline image. `[label](url)` = labeled link with preview.
+
+- **Catalog-style replies** (numbered lists of characters / scenes / products): embed `![alt](url)` so each item shows inline.
+- **Conversational replies** ("4 shots ready"): keep prose short; canvas chip already shows gallery.
+
+Avoid bare URL dumps and HTML `<table>` grids — canvas already provides a gallery.
+
+**After `generate_creative_director` completes** — share results as individual URLs, one per scene. Do NOT create an HTML grid artifact.
+
+**Always** record every URL in `.kolbo/production.md` — see `references/workflows/production-log.md`.
+
+## Available MCP Tools
 
 ### Generation
-
 | Tool | Description |
 |------|-------------|
-| `generate_image` | Single image from a text prompt. Supports Visual DNA, moodboards, reference images, web-search grounding. |
-| `generate_image_edit` | Edit/transform an existing image. Pass `source_images` + edit prompt. |
-| `generate_creative_director` | **2–8 related images or videos as one coherent set** — handled by the `kolbo-creative-director` skill. |
+| `generate_image` | Single image from a text prompt. Supports Visual DNA, moodboards, image presets, reference images, web-search grounding. When a preset is requested, resolve it with `list_presets({ type: "image" })` and pass its exact id as `preset_id`. |
+| `generate_image_edit` | Edit/transform an existing image. Pass `source_images` + edit prompt. Image-editing presets are supported through `preset_id` from `list_presets({ type: "image_edit" })`. |
+| `generate_creative_director` | **2–8 related images or videos as one coherent set.** Use INSTEAD of multiple `generate_image` calls for any related multi-output. |
 | `generate_video` | Text-to-video. Does **not** support Visual DNA — use `generate_elements` for character-consistent video. |
 | `generate_video_from_image` | Animate a still. Prompt describes motion, not subject. |
 | `generate_video_from_video` | Restyle/transform an existing video. Keeps original motion. |
-| `generate_elements` | Reference-driven video. **Primary route for DNA → video.** |
+| `generate_elements` | Reference-driven video. **Primary route for DNA → video.** Prompt = Seedance Locked Intro (`Total` + `[GLOBAL LOOK]` / `[CAST]` / `[LOCATION]` + `SHOT N`). Every DNA in `visual_dna_ids` must also be `@Name` in that prompt. |
 | `generate_first_last_frame` | Keyframe interpolation between two frames. |
 | `generate_lipsync` | Lipsync audio to an image or video face. |
-| `generate_music` | Music generation — see `kolbo-music`. |
+| `generate_music` | Music generation (Suno + variants). |
 | `generate_speech` | TTS. Use `list_voices` to pick a voice. |
 | `generate_sound` | Sound effects. |
 | `generate_3d` | 3D models from text / single image / multi-view. Returns GLB/FBX/OBJ/USDZ. |
-| `transcribe_audio` | Audio/video → text + SRT + word-by-word SRT — see `kolbo-transcription`. |
+| `separate_audio_stems` | Split a soundtrack into Dialogue / Music / Effects / without-dialogue (M&E). The route for removing or isolating speech, instrumental beds, and stems for dubbing. 5cr, inline. See `workflows/audio-stems.md`. |
+| `clean_dialogue_leftovers` | Strip voices still faintly audible in an M&E layer. 17cr — only when the user reports the leak, it trades fidelity. |
+| `separate_ambience` | Pull room tone out of the Effects bed as its own lane. 17cr. |
 
-### Discovery, Library, Visual DNA, Moodboards, Chat, App Builder, Publishing
-
+### Discovery, Library, Visual DNA, Moodboards, Chat, Publishing
 | Tool | Purpose |
 |------|---------|
-| `list_models` / `list_voices` / `check_credits` / `get_generation_status` / `get_session_usage` | Discovery + status |
-| `upload_media` / `list_media` / `get_media` / `get_media_stats` / `favorite_media` / `unfavorite_media` / `delete_media` / `restore_media` / `permanently_delete_media` / `move_media` / `bulk_*_media` / `*_media_folder` | Media library — see `references/workflows/media-library.md` |
-| `create_visual_dna` / `list_visual_dnas` / `get_visual_dna` / `delete_visual_dna` | Visual DNA — see `kolbo-visual-dna` skill |
-| `list_moodboards` / `get_moodboard` / `list_presets` | Style overlays |
+| `list_models` / `list_voices` / `check_credits` / `get_generation_status` / `cancel_generation` / `get_session_usage` | Discovery + status. `list_models` with no args returns the recommended shortlist out of ~428 — pass `type` for a full category with per-model caps. `cancel_generation` stops an in-flight job and refunds what it can: use it when the user changes their mind mid-generation instead of letting it run. |
+| `upload_media` / `create_upload_ticket` / `list_media` / `get_media` / `get_media_stats` / `favorite_media` / `unfavorite_media` / `delete_media` / `restore_media` / `permanently_delete_media` / `move_media` / `bulk_*_media` / `*_media_folder` | Media library — see `workflows/media-library.md`. Getting a LOCAL file in depends on where the server runs: `upload_media` with a path only works on a local (stdio) install; over a remote connector use `create_upload_ticket` and POST the file yourself. |
+| `create_visual_dna` / `generate_character_sheet` / `list_visual_dnas` / `get_visual_dna` / `delete_visual_dna` / `*_visual_dna_folder` (5 folder tools) | Visual DNA (+ character sheet, character folders) — see `workflows/visual-dna.md` |
+| `list_moodboards` / `get_moodboard` / `list_presets` | Style overlays. A preset request is binding: resolve the requested or closest matching preset in the correct catalog, then pass its exact returned `id` as `preset_id`. Never say a preset was used if the generation call omitted it. |
+| `list_color_palettes` / `analyze_color_palette` / `create_color_palette` / `update_color_palette` / `delete_color_palette` / `activate_color_palette` / `deactivate_color_palette` | **Color DNA — sticky and account-wide.** At most one palette is active at a time; while it is, it strict-grades **every** image and video generation automatically, with no per-call argument. `analyze_color_palette` pulls colors out of 1-5 image URLs for free and does NOT save. `create_color_palette` defaults `is_active: true`, which activates it and deactivates any other. Per-generation opt-out: `skip_color_palette: true` on `generate_image` / `generate_image_edit` / `generate_video` / `generate_video_from_image`. |
+| `list_agents` / `create_agent` / `update_agent` / `delete_agent` | Custom chat agents — reusable named personas for `chat_send_message`. The agent's `description` IS the system instruction. Resolve a name the user mentions ("use my SEO agent") to an id with `list_agents`, then pass `agent_id`. Global/preset agents are read-only; only the user's own can be updated or deleted. |
+| `search_stock_media` / `get_stock_sources` / `get_stock_categories` / `get_stock_collections` / `get_stock_asset` / `analyze_script_for_stock` / `import_stock_asset` | Stock library (free, no credits) — EXISTING photos / videos / 3D / SFX / music. For stock **music** use `search_stock_media` with `mediaType: "music"` (semantic vibe query, e.g. "uplifting corporate background") → `get_stock_asset` for downloads. The older `*_music_library` tools are deprecated adapters over this — prefer the stock tools, except for the licensed-catalog tools in the next row. |
+| `search_music_library` / `browse_music_library` / `get_music_library_facets` / `get_music_track_audio` / `get_music_track_lyrics` / `get_music_track_related` / `analyze_script_for_music` / `acquire_clean_music_track` / `import_music_track_to_library` | **SYNCI licensed music** — a commercially licensed catalog, not free stock. Discovery and previews are free but **watermarked**; there is no unwatermarked URL until you pay. `acquire_clean_music_track` (or `import_music_track_to_library`, which also copies it to the media library) **CHARGES CREDITS** for the clean master — confirm with the user first, and pass a stable `requestId` so a retry doesn't buy it twice. `analyze_script_for_music` turns a script into search terms for `search_music_library`. Use this family when the user needs music cleared for commercial use; use `search_stock_media` with `mediaType: "music"` when free stock will do. |
+| `list_projects` / `move_session` | Projects: resolve a project NAME → the `project_id` you pass on generation/upload/doc calls; `move_session` relocates a whole session + its media when work landed in the wrong project. See "Projects — Where Work Lands" below. |
+| `create_project` / `update_project` / `archive_project` / `unarchive_project` / `list_sessions` / `rename_session` / `delete_session` / `restore_session` | Project lifecycle + session inventory. `list_sessions` returns `project_id` + `types[]` on every row. Soft-delete leftover empty sessions after a move; `restore_session` undoes trash. Create a project when the user starts new work, then pass its id on EVERY call. |
+| `bulk_move_sessions` / `list_session_generations` / `move_generations_to_session` / `split_session` / `undo_session_organization` | Reorganize many sessions or generations. `list_session_generations` is an inventory (not a live generation card). |
+| `add_project_context` / `list_project_context` / `delete_project_context` / `get_project_profile` / `regenerate_project_profile` | Project knowledge base (RAG): feed scripts/URLs/notes; `get_project_profile` = the living brief — read it to ground work in the project |
+| `create_moodboard` / `update_moodboard` / `delete_moodboard` | Moodboards from image URLs → AI master style prompt → pass `moodboard_id` to generation tools |
+| `clone_voice` / `import_elevenlabs_voice` / `delete_voice` | Custom voices (clone CHARGES CREDITS — confirm first; new voices show in `list_voices`) |
+| `trim_video` | Frame-accurate trim of a Kolbo-hosted video (tool waits and returns the URL). `edit_video` also gained `remove_background`. |
+| `create_doc` / `list_docs` / `get_doc` / `update_doc` / `share_doc` / `delete_doc` | AI Docs (Magic Pad): YOU author full HTML documents (plans, briefs, scripts, research) saved into the user's project, editable in the Kolbo app. `share_doc` returns a public link. `update_doc` content replaces the WHOLE doc — `get_doc` first. |
 | `chat_send_message` / `chat_list_conversations` / `chat_get_messages` | Kolbo chat with optional `media_urls` (up to 10 per call) |
-| `app_builder_*` (9 tools) | Full React app gen — see `kolbo-app-builder` skill |
-| `publish_html_artifact` | Publish HTML / SVG / Mermaid to `sites.kolbo.ai` — see `kolbo-html-artifacts` skill |
+| `publish_html_artifact` | Publish HTML / SVG / Mermaid to `sites.kolbo.ai`. Server dedupes by content hash. Strict CSP. |
+
+## ⚠️ Seedance / Elements prompt contract (HARD RULE)
+
+`generate_elements`, Seedance 2, and Seedance 2.5 share **one** compile shape — the Locked Intro in `references/models/seedance.md`:
+
+`Total: Xs / N shots / AR` → `[GLOBAL LOOK – LOCKED, APPLIES TO EVERY SHOT]` → `[CAST – IDENTICAL IN EVERY SHOT]` (each person is `@DNAName`) → `[LOCATION]` → `SHOT N — 0:00–0:02 — …`
+
+Do **not** default Elements to `SCENE CONTEXT` / `OPTICS` / `ACTION` / `ACTIVE REFERENCES` department packs (those live in filmmaking audit/contracts for other models). Do not load `seedance-2-prompting` SCENE CONTEXT as the Elements format.
 
 ## ⚠️ If the User Names a Tool, USE THAT TOOL (HARD RULE)
 
-A user-named tool — in any language — overrides every other rule.
+A user-named tool — in any language — overrides every other rule. Recognized aliases:
 
 | User said (any language) | Use exactly |
 |---|---|
-| "director", "creative director", **"במאי"**, "ad set", "campaign tool", "storyboard tool" | `generate_creative_director` (route to `kolbo-creative-director` skill) |
-| "image edit", "edit", "modify", "remove background", **"עריכת תמונה"** | `generate_image_edit` |
+| "director", "creative director", **"במאי"**, "ad set", "campaign tool", "storyboard tool" | `generate_creative_director` |
+| "image edit", "edit", "modify", "remove background", **"עריכת תמונה"** (paired with a per-image instruction) | `generate_image_edit` |
 | "elements" / **"אלמנטים"** | `generate_elements` |
 | "first/last frame" / **"פריימים"** | `generate_first_last_frame` |
 | "lipsync" / **"ליפסינק"** | `generate_lipsync` |
@@ -118,83 +203,59 @@ A user-named tool — in any language — overrides every other rule.
 | "Animate this image" | `generate_video_from_image` | — |
 | "Restyle this video as anime" | `generate_video_from_video` | — |
 | "Modify THIS one image" — change bg, remove object, recolor | `generate_image_edit` | ❌ Not for multi-output |
-| "4 angles / poses / views of this character" | → switch to `kolbo-creative-director` | ❌ Don't loop `generate_image_edit` |
+| "4 angles / poses / views of this character" / "variations of this character" | `generate_creative_director` with `visual_dna_ids` | ❌ Don't loop `generate_image_edit` |
 | "4 variations of THIS exact image" (same prompt, different seeds) | `generate_image` with `num_images=4` | ❌ Not `generate_image_edit` |
 
 ## Core Workflow
 
-1. **Check credits** ONCE per conversation (Step 0).
-2. **Discover models** with `list_models` using a `type` filter — but **skip when the user names a specific model**.
+**Preset contract:** if the user asks for a preset, names one, or says to use one of their/Kolbo presets, call `list_presets` with the matching type before generation and pass the selected exact `id` as `preset_id`. Use `image` for `generate_image` and `image_edit` for `generate_image_edit`. Never invent an id or silently continue without the requested preset.
+
+1. **Check credits** ONCE per conversation (Step 0). Skip if already checked.
+2. **Discover models** with `list_models` using a `type` filter — but **skip when the user names a specific model** (this turn **or** earlier in the conversation / compaction `## Locked choices`).
 3. **Pick the model**:
-   - User named one → use it.
-   - Auto-select → only from "Auto-selectable" section (models with a `summary`). Cheapest fit. Prefer `[RECOMMENDED]` when cost is similar.
+   - User named one → that name is a **family lock**, not a single catalog row. Use it. Identifiers resolve leniently — `"z-image"` / `"nano banana 2"` / `"grok imagine"` auto-resolve, including to the sibling for the tool you are calling (`grok-imagine-text-to-video` on `generate_video_from_image` becomes `grok-imagine-image-to-video`). `list_models` is still authoritative for constraints, caps, and pricing — not for swapping brands.
+   - **Never cheapest-swap a named family.** After compaction, "animate those images" is still Grok if the user said Grok. Seedance / Kling / Veo are not a "best balance" substitute. If the named family has no variant for this modality, ASK — do not silently switch.
+   - Auto-select → **only when no model was named on this task**. Then pick from "Auto-selectable" (models with a `summary`). Cheapest fit. Prefer `[RECOMMENDED]` when cost is similar.
    - Never auto-select from "Named-only" section.
 4. **Validate inputs** against model caps — see `references/workflows/cost-and-validation.md`.
-5. **How calls work**: each tool blocks until generation is fully complete. Images: seconds. Video: minutes. Multiple tool calls in one response run concurrently. If a call times out, use `get_generation_status` with the returned generation ID.
-6. **Share the URL** after success. Never fabricate URLs.
+5. **How calls work**: each tool blocks until generation is fully complete. Images: seconds. Video: minutes. Multiple tool calls in one response run concurrently. On hosts with live widgets the tool instead returns `submitted` instantly — the card updates on its own; you only need `get_generation_status` when a follow-up step needs the output URLs.
+6. **Checking status — NEVER poll in a loop**: `get_generation_status` takes `wait=true` (blocks server-side until done, ~3 min) and `generation_ids` (check MANY generations in ONE call — returns `all_done` + which are still running). One `wait=true` call replaces any polling loop. If it comes back with some still processing, call it ONCE more with `wait=true` and the remaining ids.
+7. **Share the URL** after success. Never fabricate URLs.
 
 Model types for `list_models`: `text_to_img`, `image_editing`, `text_to_video`, `img_to_video`, `draw_to_video`, `video_to_video`, `elements`, `firstlastgenerations`, `lipsync-image`, `lipsync-video`, `music_gen`, `text_to_speech`, `text_to_sound`, `stt`, `text`, `3d_text_to_model`, `3d_image_to_model`, `3d_multi_image_to_model`, `3d_world`.
 
-## Cost Awareness — Quick Rules
-
-Full tables + formulas in `references/workflows/cost-and-validation.md`. Quick rules:
-
-- **Skip cost confirmation** when user already specified model + count + duration, OR when single generation < 5 credits.
-- **Required cost confirmation** otherwise: one-line summary, suggest cheaper alternative, wait for confirm.
-- **Batch totalling 100+ credits**: run `check_credits` first.
-- **Quote real cost**: after firing, log `credits_used` (from the tool result) to `.kolbo/production.md` — never `base × count`.
-
 ## Rate Limiting & Batch Generation
 
-- `generate_image`: 30/min. Other generation tools: 10/min per type. 300/min global. `upload_media`: 300/min, no credit cost.
-- **⚠️ NEVER re-fire a generation you already called.** Aborted / timed-out calls still process server-side. Run `get_generation_status` before retrying.
+- `generate_image`: 30/min. All other generation tools: 10/min per type. 300/min global. `upload_media`: 300/min, no credit cost.
+- **⚠️ NEVER re-fire a generation you already called.** Aborted / timed-out calls still process server-side. Run `get_generation_status` (with `wait=true`) before retrying.
+- **Tracking a batch**: check ALL in-flight ids in ONE `get_generation_status` call with `generation_ids` + `wait=true`. Read `all_done` / `still_processing` from the response — do not check ids one by one, and never re-call without `wait`.
 - **Batch ≤10 items**: output ALL tool calls in one response — they run concurrently.
-- **Bulk >10 items**: real-world ceilings — `generate_image` 8–10 in-flight, video tools 3–5. Fire one batch → wait → fire next. Persist every `generation_id` in `.kolbo/production.md`.
-- **`upload_media` external URLs first.** `files`/`source_images`/`image_url` only accept Kolbo-hosted URLs reliably.
-
-## 🛑 Runaway-Loop Guard — ONE Generation per Requested Item (CRITICAL)
-
-When the user asks for **one specific change**, the answer is **a single tool call**. After URLs return, **stop**. Surface and wait.
-
-NOT allowed: fire the same tool 3+ times in a single turn (unless user asked for "N variations"), re-fire because the result might not be exactly right, auto-retry on success, fire 5+ parallel `generate_video*` calls speculatively.
-
-**Only re-fire when:** user explicitly asked for variations with a count, OR previous call returned `failure.retryable === true` (ONE retry), OR previous call returned `completed` but `urls.length === 0` (ONE retry).
+- **Bulk >10 items**: real-world ceilings — `generate_image` 8–10 in-flight, image-edit 5–8, video tools 3–5, `generate_video_from_video` 3, music/speech/sound 5–8. Fire one batch → wait → fire next. Persist every `generation_id` in `.kolbo/production.md`.
+- **`upload_media` external URLs first.** `files`/`source_images`/`image_url` only accept Kolbo-hosted URLs reliably; external URLs cause `400`.
 
 ## ⚠️ Editing an Existing Video → ONE Call, Not Frames-First (CRITICAL)
 
-Existing video → modify → **single `generate_video_from_video` call** with source video URL + edit prompt. **Use a TRUE video-to-video model** (image-to-video models reject with `WRONG_MODEL_TYPE`). Valid: `wan/2-7-videoedit`, `happyhorse/video-edit`, `kling-video/o3-video-to-video`, or any model whose DB `type` includes `video_to_video`.
+Existing video → modify → **single `generate_video_from_video` call** with source video URL + edit prompt.
 
-## ⚠️ Detecting Failed Generations (CRITICAL)
+**Use a TRUE video-to-video model.** Image-to-video models reject with `WRONG_MODEL_TYPE`. Valid: `wan/2-7-videoedit`, `happyhorse/video-edit`, `kling-video/o3-video-to-video`, or any model whose DB `type` includes `video_to_video` (use `list_models({ type: "video_to_video" })`).
 
-Three failure modes — treat ALL as failure:
-1. **Tool returns `error`** — explicit. Surface, suggest retry, log `generation_id`.
-2. **Tool returns `completed` but `urls` is empty** — silent failure. Tell user "completed without an output — retrying" and re-fire ONCE. Do NOT log to `.kolbo/production.md`. Do NOT claim it worked.
-3. **Tool hangs / never returns** — call `get_generation_status(generation_id)` IMMEDIATELY.
+**Motion-control / animate-move models invert the inputs**: `reference_images[0]` = the CHARACTER IMAGE to animate, `source_video` = the driving/reference video whose motion is transferred. Omitting the character image returns a `MOTION_CONTROL_INPUTS` error.
 
-**Always:** don't celebrate before reading the result; partial batches list failed items + reasons + successful count ("6 of 8 ready", not "videos ready"); never auto-retry without surfacing; never log failures to `.kolbo/production.md`.
+**Do NOT** decompose into frames. **Do NOT** re-fire if the first call returned URLs.
 
-## ⚠️ Generated URLs in Chat (CRITICAL)
+## ⚠️ Character-Driven Video — Frames First, Then Animate (CRITICAL)
 
-Chat renders markdown natively. `![alt](url)` = inline image. `[label](url)` = labeled link with preview.
+For any ad / story / scene-based video **created from scratch** featuring a Visual DNA character (NOT v2v edits):
 
-- **Catalog-style replies** (numbered lists): embed `![alt](url)` so each item shows inline.
-- **Conversational replies** ("4 shots ready"): keep prose short; canvas chip already shows gallery.
+1. **Generate the shot frames first** via `generate_creative_director` with `scene_count` + `visual_dna_ids` (image mode). DNA is strongest in image gen; user can approve cheaply.
+2. **Confirm the frames** if >3 shots.
+3. **Animate each frame** with `generate_video_from_image`, fired in parallel.
 
-Avoid bare URL dumps and HTML `<table>` grids. Always record every URL in `.kolbo/production.md` — see `references/workflows/production-log.md`.
-
-## Speech / Sound / 3D — Quick Rules
-
-- **TTS** — call `list_voices` first, pass `voice_id` to `generate_speech`. For multilingual, pick a voice that supports the language.
-- **Sound effects** — describe physically, not emotionally. "Heavy wooden door creaking open slowly, echoing in a stone hallway" not "creepy atmosphere".
-- **3D** — three modes: text-only, single image, multi-view. Returns GLB/FBX/OBJ/USDZ. Use `list_models({ type: "three_d" })` to discover.
+Skip frames-first only when the user says "go straight to video", single-shot quick experiments, or the user supplies approved frames. Full rules: `references/models/creative-director.md`.
 
 ## Limitations & Safety
 
-- **Real people**: never identify specific individuals in photos, even public figures.
-- **NSFW**: Kolbo enforces content safety at the model level. Failed on safety → rephrase, don't retry identically.
+- **Real people**: never identify specific individuals in photos, even public figures. Describe visible attributes only.
+- **NSFW**: Kolbo enforces content safety at the model level. If a generation fails on safety grounds, rephrase rather than retrying identically.
 - **Copyright**: style references are fine ("in the style of Studio Ghibli"); verbatim reproduction is not.
 - **No fabricated URLs**: only share URLs that actually came back from a tool call.
-
----
-
-If you still don't know which `references/` file to load, default to `references/models/prompt-copilot.md` for generation prompts or `references/workflows/cost-and-validation.md` for cost/validation, or just keep going with this core file's rules.

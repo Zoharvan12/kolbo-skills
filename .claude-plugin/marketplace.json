@@ -10,12 +10,17 @@
       "name": "kolbo",
       "source": "./",
       "description": "Image/video generation, Marketing Studio, product photoshoot, marketplace cards, Visual DNA, Creative Director, HTML artifacts, App Builder.",
-      "version": "0.4.0",
+      "version": "0.8.4",
       "skills": [
         {
           "name": "generate",
           "path": "kolbo-generate",
           "invoke": "/kolbo:generate"
+        },
+        {
+          "name": "visual-dna",
+          "path": "kolbo-visual-dna",
+          "invoke": "/kolbo:visual-dna"
         },
         {
           "name": "creative-director",
@@ -43,9 +48,9 @@
           "invoke": "/kolbo:marketplace-cards"
         },
         {
-          "name": "visual-dna",
-          "path": "kolbo-visual-dna",
-          "invoke": "/kolbo:visual-dna"
+          "name": "transcription",
+          "path": "kolbo-transcription",
+          "invoke": "/kolbo:transcription"
         },
         {
           "name": "music",
@@ -58,14 +63,9 @@
           "invoke": "/kolbo:html-artifacts"
         },
         {
-          "name": "transcription",
-          "path": "kolbo-transcription",
-          "invoke": "/kolbo:transcription"
-        },
-        {
-          "name": "app-builder",
-          "path": "kolbo-app-builder",
-          "invoke": "/kolbo:app-builder"
+          "name": "filmmaking",
+          "path": "kolbo-filmmaking",
+          "invoke": "/kolbo:filmmaking"
         }
       ]
     }

@@ -39,7 +39,7 @@ Example shape: `[Subject] A striking fashion model in a tailored brown dress, sl
 For character consistency, product placement, sketch-to-render, fabric/material transfer, etc.
 **Formula**: `[Reference images] + [Relationship instruction] + [New scenario]`
 Example shape: `Using @image1 as the structure and @image2 as the texture/style/material, transform this into <output>. Place it in <new scenario>.`
-- Reference images by tag (`@image1`, `@image2`, …) and state explicitly what role each plays (structure / texture / palette / character / product) — see the `kolbo-visual-dna` skill.
+- Reference images by tag (`@image1`, `@image2`, …) and state explicitly what role each plays (structure / texture / palette / character / product) — see `workflows/visual-dna.md`.
 - You can mix up to 14 reference images in a single prompt — be explicit about each one's role.
 
 ### 3. Image editing

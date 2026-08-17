@@ -1,5 +1,5 @@
 ---
-version: 0.4.0
+version: 0.8.4
 name: kolbo-product-photoshoot
 description: |
   Generate brand-quality product images across 10 specialized modes:
@@ -24,16 +24,117 @@ argument-hint: "[mode] [brief] [--image <product-photo>] [--count N]"
 allowed-tools: Bash, Read, Write, Edit
 ---
 
-# Kolbo Product Photoshoot — Brand Product Imagery
+<!-- AUTO-GENERATED from kolbo-code packages/opencode/skills/kolbo — DO NOT EDIT.
+     Edit the canonical skill and let .github/workflows/sync-skill-to-plugin.yml regenerate this. -->
 
-For ad **video** see `kolbo-marketing-studio`. For composed brand ads (brand kit + ad format + avatar) see `kolbo-dtc-ads`. For marketplace listings see `kolbo-marketplace-cards`.
+# Kolbo Product Photoshoot
 
 ## Step 0 — Bootstrap
 
-1. Run `check_credits` once per conversation. If it fails, ask the user to run `kolbo auth login`.
-2. Image gen is flat-priced per output. Nano Banana 2 = ~8 cr at 1K, ~16 at 2K, ~32 at 4K. Run `check_credits` before bulk runs (≥5 images).
+Once per conversation, before any other Kolbo tool call:
 
-## The 10 Modes
+1. **Run `check_credits`.** If it fails with "Session expired" / "Not authenticated", ask the user to run `kolbo auth login` (or their branded CLI command like `sapir auth login`) and reload the editor.
+2. **If `list_models` returns empty**, MCP isn't wired — same fix.
+3. Use the balance ONLY for the low-balance check at this moment. **Never quote a "credits remaining" number later in the session** — coding/chat usage also deducts credits, so any remembered or computed balance is stale. Report only what each generation cost (`credits_used`); if the user asks what's left, run `check_credits` fresh right then.
+
+If the user is on a whitelabel build (`sapir`, etc.), they must use their branded command — not `kolbo`. See `references/workflows/troubleshooting.md`.
+
+## 🎬 Confirm the Creative Brief BEFORE Generating (CRITICAL — read first)
+
+Never fire a paid generation the moment the user says "make X". First **present the brief back as a confirmation the user can change** — this is the single most important interaction. It gives the user control over what gets created and what it costs, instead of silently spending credits on defaults.
+
+**Before ANY paid image / video / music / speech / 3D generation**, unless the user has *explicitly* dictated every key parameter in this message, ask ONE labeled question (the UI renders it as an options card) confirming:
+
+- **Model** — your recommended pick as the default option, plus 1–2 alternatives (with their credit cost).
+- **Aspect ratio** — e.g. `1:1 / 9:16 / 16:9` (offer the sensible default first).
+- **Count** — how many (1 / 4 / …).
+- **Resolution / quality / duration** — where the model supports it.
+- **Creative direction** — style / mood / scene, when the user was vague ("4 cats" → offer style options: photoreal / illustrated / cinematic / surprise-me).
+- **Credit cost** — state the total (`✦ N credits`) right in the question so cost is never a surprise.
+
+Then generate **only** with the confirmed parameters. If the user changes an option, use the change. This mirrors the approval-card flow: propose → let them adjust → confirm → generate.
+
+**Only skip the brief confirmation when** the user's message already pins model + aspect + count + creative direction (e.g. "generate 4 photoreal tabby cats, 1:1, z-image/turbo") — then just state the cost one-liner and fire. A low credit cost is **not** a reason to skip: cheap ≠ no-confirmation. What matters is whether the user actually chose the parameters.
+
+For multi-scene / batch work this pairs with `generate_creative_director` (see below) — still confirm the brief first.
+
+## ⚠️ Visual DNA `@Name` in the prompt (HARD RULE — always on)
+
+Passing `visual_dna_ids` is **not enough**. For every DNA in that array you MUST also write `@ExactStoredName` in the prompt text (the `name` from `list_visual_dnas` / `create_visual_dna`). The engine binds identity by parsing `@tags`. No `@tag` → the DNA is wasted.
+
+- Right: `visual_dna_ids: ["vdna_…"]` + prompt `@Zohar walks into frame`
+- Wrong: `Zohar's`, `Zohar`, `the left man`, `the man on the LEFT`, `Visual DNA anchors: the man on the LEFT…` — none of these bind
+- Never invent a role label or possessive as a substitute for `@Name`
+- Same rule for moodboards: `#ExactBoardName`
+
+Resolve names with `list_visual_dnas` first. Full binding rules: `references/workflows/visual-dna.md`.
+
+## 📁 Projects — Where Work Lands (CRITICAL)
+
+Everything in Kolbo — sessions, generations, media, docs — lives inside a PROJECT. Getting this wrong is the #1 user complaint ("my work went to the wrong project").
+
+1. **User names a project** ("in my Acme project", "for the film") → call `list_projects` ONCE to resolve the name to an ObjectId, then pass that **same** id as `project_id` on **EVERY** subsequent `generate_*` / `upload_media` / `create_doc` / `chat_send_message` call in **this conversation**. There is no server-side sticky store — omitting it on any later call silently lands in the default "API Generations" bucket (`is_default: true`). Once resolved, treat that id as required for the rest of the conversation. Accounts often hold hundreds of projects, so pass `list_projects({ search: "acme" })` rather than listing everything; the list is paginated (50/page) and hides archived projects unless you pass `include_archived: true`.
+2. **No project mentioned** → omit `project_id`; the default bucket is correct. Don't ask unless intent is ambiguous. If `list_sessions` already returned a `project_id` for the work you are continuing, keep passing that id.
+3. **Work landed in the wrong project? MOVE it, never regenerate**: `move_session` relocates a whole session + all its media (works for any session type — the `session_id` from generation responses, chats, transcriptions); `move_media` / `bulk_move_media` / `move_folder_contents` relocate individual media items. Empty leftover sessions after a move: `delete_session` (soft-delete; `restore_session` undoes it). `rename_session` only changes the sidebar title.
+
+## Cost Awareness — Quick Rules
+
+Full tables + formulas in `references/workflows/cost-and-validation.md`. Quick rules:
+
+- **Skip the brief/cost confirmation ONLY** when the user's message already pins model + count + aspect + creative direction (see "Confirm the Creative Brief" above). Low cost alone is **not** a reason to skip — cheap generations still get the one labeled confirmation unless the user chose the parameters.
+- **Otherwise confirm** via the labeled-question card: the parameters + the credit cost, suggest a cheaper alternative if one fits, wait for the user's pick. Never fire on defaults the user didn't choose.
+- **Batch totalling 100+ credits**: run `check_credits` first.
+- **Quote real cost**: after firing, log `credits_used` (from the tool result) to `.kolbo/production.md` — never `base × count`.
+- **Never state "credits remaining" from arithmetic** (opening balance − generation costs). Coding/chat usage deducts credits too, so the math is always wrong. Report cost only; if the user asks for their balance, call `check_credits` fresh at that moment.
+
+## 🛑 Runaway-Loop Guard — ONE Generation per Requested Item (CRITICAL)
+
+When the user asks for **one specific change**, the answer is **a single tool call**. After URLs return, **stop**. Surface and wait.
+
+You are NOT allowed to:
+- Fire the same tool 3+ times in a single turn unless the user explicitly asked for "N variations".
+- Re-fire because you think the result might not be exactly what the user wanted.
+- Auto-retry on success.
+- Fire 5+ parallel `generate_video*` calls speculatively.
+
+**Only re-fire when:** user explicitly asked for variations with a count, OR previous call returned `failure.retryable === true` (ONE retry), OR previous call returned `completed` but `urls.length === 0` (ONE retry).
+
+## ⚠️ Detecting Failed Generations (CRITICAL)
+
+A generation can fail three ways. Treat ALL as failure:
+
+1. **Tool returns `error`** — explicit. Surface, suggest retry, log `generation_id`.
+2. **Tool returns `completed` but `urls` is empty** — silent failure (NSFW filter, model OOM, upstream 5xx). Tell user "completed without an output — retrying" and re-fire ONCE. Do NOT log to `.kolbo/production.md`. Do NOT claim it worked.
+3. **Tool hangs / never returns** — MCP poll timed out. Call `get_generation_status(generation_id, wait=true)` IMMEDIATELY. The server might be done.
+
+**Always:**
+- Don't celebrate before reading the result. Verify `urls` is non-empty.
+- Don't auto-retry without surfacing the failure. Partial batches: list failed items + reasons + successful count. Never "✅ all done!" on partials.
+- Don't log failed items to `.kolbo/production.md`. Only successes.
+- Surface the user's count. "6 of 8 ready", not "videos ready".
+
+`failure` envelope structure + retry rules: `references/workflows/troubleshooting.md`.
+
+## ⚠️ Generated URLs in Chat (CRITICAL)
+
+Chat renders markdown natively. `![alt](url)` = inline image. `[label](url)` = labeled link with preview.
+
+- **Catalog-style replies** (numbered lists of characters / scenes / products): embed `![alt](url)` so each item shows inline.
+- **Conversational replies** ("4 shots ready"): keep prose short; canvas chip already shows gallery.
+
+Avoid bare URL dumps and HTML `<table>` grids — canvas already provides a gallery.
+
+**After `generate_creative_director` completes** — share results as individual URLs, one per scene. Do NOT create an HTML grid artifact.
+
+**Always** record every URL in `.kolbo/production.md` — see `references/workflows/production-log.md`.
+
+## Product Photoshoot — Brand Product Imagery
+
+Load this file when the user wants **brand-quality product images** — studio shots, lifestyle scenes, Pinterest pins, hero banners, social carousels, ad packs, virtual try-ons, conceptual / CGI product shots, or seasonal restyles.
+
+For ad **video** see `workflows/marketing-studio.md`. For composed brand ads (brand kit + ad format + avatar) see `workflows/dtc-ads.md`. For marketplace listings (Amazon main + secondary + A+ content) see `workflows/marketplace-cards.md`.
+
+### The 10 Modes
 
 Pick by intent, not surface keyword. When two modes could apply, prefer the more specific one.
 
@@ -50,7 +151,7 @@ Pick by intent, not surface keyword. When two modes could apply, prefer the more
 | `conceptual_product` | Surreal / CGI / levitating / splash / sculptural product |
 | `restyle` | Transform an EXISTING image's aesthetic, mood, or seasonal context (without changing the subject) |
 
-### Picking the Mode
+#### Picking the Mode
 
 | User phrasing | Mode |
 |---|---|
@@ -71,7 +172,7 @@ Pick by intent, not surface keyword. When two modes could apply, prefer the more
 - "Carousel of my product in different scenes" → `social_carousel` (multi-slide wins)
 - "Closeup of person applying my serum" → `closeup_product_with_person` (specific genre wins)
 
-## Mode → Kolbo MCP Routing
+### Mode → Kolbo MCP Routing
 
 The mode determines which Kolbo MCP tool to call and what defaults to use.
 
@@ -92,20 +193,20 @@ The mode determines which Kolbo MCP tool to call and what defaults to use.
 
 **Always validate** `aspect_ratio` and `resolution` against the chosen model's `supported_aspect_ratios` / `supported_resolutions` via `list_models` — see SKILL.md "Resolution / Aspect / Duration — validate against caps".
 
-## Pre-Generation Interview (CRITICAL)
+### Pre-Generation Interview (CRITICAL)
 
 Ask **at most 4 short questions** before submitting, always with **labeled options, never open-ended**. Skip a question whose answer is obvious from context (uploaded image, prior turn, brand memory in `.kolbo/brand-kits/`).
 
 Pick the question stack based on user state:
 
-### Type A — Uploaded a product photo, said "make me images / photoshoots"
+#### Type A — Uploaded a product photo, said "make me images / photoshoots"
 
 1. **How many?** `[1 / 3 / 5]`
 2. **What style/mood?** `[Clean studio / Lifestyle / Conceptual / With a model / Other]`
 3. **Where will you use them?** `[Shopify / Instagram / Pinterest / Paid ads / Website hero]`
-4. **Brand colors to match?** (skip if a brand kit exists at `.kolbo/brand-kits/SLUG.md`)
+4. **Brand colors to match?** (skip if a brand kit exists at `.kolbo/brand-kits/<slug>.md`)
 
-### Type B — Uploaded a product photo + named a use case
+#### Type B — Uploaded a product photo + named a use case
 
 E.g. "make ads for my product", "make a Pinterest pin", "make a hero banner". Mode is obvious. Ask only the gaps:
 
@@ -113,14 +214,14 @@ E.g. "make ads for my product", "make a Pinterest pin", "make a hero banner". Mo
 2. **What's the offer / mood / hook?**
 3. **Anything in particular to emphasize?**
 
-### Type C — Text only, no product photo
+#### Type C — Text only, no product photo
 
 1. **Can you upload a product photo?** (preferred — much higher fidelity)
 2. **If not, describe the product** — category, packaging, color, distinctive features
 3. **What style?** `[Clean studio / Lifestyle / Conceptual / With a model / Other]`
 4. **Where will you use it?** `[Shopify / Instagram / Pinterest / Paid ads / Website hero]`
 
-### Type D — Uploaded existing image, "redo / change vibe / different version"
+#### Type D — Uploaded existing image, "redo / change vibe / different version"
 
 → Mode: `restyle`
 
@@ -128,7 +229,7 @@ E.g. "make ads for my product", "make a Pinterest pin", "make a hero banner". Mo
 2. **Seasonal context?** `[Christmas / Valentine's / Halloween / Black Friday / None]`
 3. **What to preserve, what to change?** (only if ambiguous)
 
-### Type E — Model wearing a product (fashion, accessories)
+#### Type E — Model wearing a product (fashion, accessories)
 
 → Mode: `virtual_model_tryout`
 
@@ -136,7 +237,7 @@ E.g. "make ads for my product", "make a Pinterest pin", "make a hero banner". Mo
 2. **Environment?** `[Studio clean / Outdoor natural / Street style / Editorial / Home cozy]`
 3. **Framing?** `[Full body / Three-quarter / Waist up / Closeup on product area]`
 
-### Type F — Vague request, unclear subject
+#### Type F — Vague request, unclear subject
 
 E.g. "make me something cool for my brand".
 
@@ -146,15 +247,15 @@ E.g. "make me something cool for my brand".
 
 After answers → return to the relevant Type A–E.
 
-## Brand Kit Integration
+### Brand Kit Integration
 
-Before any generation, check if `.kolbo/brand-kits/SLUG.md` exists for the brand:
+Before any generation, check if `.kolbo/brand-kits/<slug>.md` exists for the brand:
 
 - **Exists** → Read it. Pull `primary_color`, `accent_color`, `fonts`, `logo_url`. Bake hex codes + named fonts into the prompt. Pass the logo as `reference_images[0]` if relevant.
-- **Doesn't exist** but user gave a brand URL → run brand research first (WebFetch the URL → extract palette + fonts + hero images → re-host via `upload_media` → write `.kolbo/brand-kits/SLUG.md`).
+- **Doesn't exist** but user gave a brand URL → Run `workflows/research-first.md` first to build one.
 - **Doesn't exist** and user gave no URL → Proceed without; ask in Type A's question 4 if relevant.
 
-## Multi-Variant Strategy
+### Multi-Variant Strategy
 
 For `count > 1` on a single-output mode (`product_shot`, `lifestyle_scene`, `closeup_product_with_person`, `moodboard_pin`, `hero_banner`, `conceptual_product`):
 
@@ -167,25 +268,25 @@ For `social_carousel` / `ad_creative_pack` (multi-output by design):
 - Each scene gets its **own intentional prompt** (different angle / framing / mood / palette) — not paraphrased copies of one scene.
 - Pass the same `visual_dna_ids` and `reference_images` across all scenes to lock product identity.
 
-## Output Discipline
+### Output Discipline
 
 - Call the chosen MCP tool — single command, no preamble.
 - For multi-output: `generate_creative_director` returns N URLs; share them as individual lines (do NOT build an HTML grid artifact — the canvas already shows the gallery).
 - For single-output: one image URL.
 - Log every URL + model + resolution + mode into `.kolbo/production.md` under `### <Mode>` subsection.
 
-## UX Rules
+### UX Rules
 
 1. **Pick the mode by intent**, not surface keyword. The user saying "Pinterest" → `moodboard_pin` regardless of what's IN the image.
 2. **Ask at most 4 labeled-option questions** before generating. Skip any question whose answer is obvious.
 3. **Always confirm aspect ratio + resolution + count** before firing — they materially change output and cost.
-4. **Reuse brand kits** — Read `.kolbo/brand-kits/SLUG.md` before generating.
+4. **Reuse brand kits** — Read `.kolbo/brand-kits/<slug>.md` before generating.
 5. **Strict NO uninvited additions** — "NO captions, NO subtitles, NO watermarks, NO extra text beyond what's specified" in every prompt.
 6. **No auto-retry on failure** — surface and let the user adjust.
 
-## Prompt Template Seeds
+### Prompt Template Seeds
 
-### `product_shot`
+#### `product_shot`
 ```
 Clean studio product photograph of @image1 (the product),
 centered on a {neutral white | seamless gradient | catalog beige} background.
@@ -195,7 +296,7 @@ Tack-sharp focus on the product, slight depth-of-field falloff on the background
 NO captions, NO watermarks, NO extra text.
 ```
 
-### `lifestyle_scene`
+#### `lifestyle_scene`
 ```
 @image1 (the product) in a {real-world scene description},
 natural {time-of-day} light, {natural action involving the product}.
@@ -205,7 +306,7 @@ Photographic, editorial style, {iPhone | 35mm film | medium format} feel.
 NO captions, NO watermarks.
 ```
 
-### `moodboard_pin`
+#### `moodboard_pin`
 ```
 Vertical 2:3 Pinterest pin, moodboard aesthetic.
 @image1 (the product) integrated into a {seasonal/aesthetic theme} flatlay or scene.
@@ -216,7 +317,7 @@ Centered hero composition, generous negative space at top for pin overlay.
 NO captions, NO text.
 ```
 
-### `restyle`
+#### `restyle`
 ```
 @image1 — preserve {subject / composition / camera angle / framing} exactly.
 Change ONLY the {aesthetic / season / mood} to {target aesthetic description}.
