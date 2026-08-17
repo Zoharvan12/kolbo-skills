@@ -1,5 +1,5 @@
 ---
-version: 0.4.0
+version: 0.8.4
 name: kolbo-creative-director
 description: |
   Generate 2–8 related image OR video outputs from one brief — storyboards, ad
@@ -23,39 +23,142 @@ argument-hint: "[scene-count] [brief] [--mode photo|video|cinema] [--visual-dna-
 allowed-tools: Bash, Read, Write, Edit
 ---
 
-# Kolbo Creative Director
+<!-- AUTO-GENERATED from kolbo-code packages/opencode/skills/kolbo — DO NOT EDIT.
+     Edit the canonical skill and let .github/workflows/sync-skill-to-plugin.yml regenerate this. -->
 
-Multi-scene batch generator. 1–8 scenes in one call, fanned out in parallel into images or videos, optionally locked to a character/product (Visual DNA) and a mood/style (Moodboard).
+# Kolbo Creative Director — Multi-Scene Batches
 
 ## Step 0 — Bootstrap
 
-1. Run `check_credits` once per conversation. If it fails, ask the user to run `kolbo auth login`.
-2. Director runs scenes in parallel internally — total wall time = slowest scene, not the sum.
+Once per conversation, before any other Kolbo tool call:
 
-## MCP Tool
+1. **Run `check_credits`.** If it fails with "Session expired" / "Not authenticated", ask the user to run `kolbo auth login` (or their branded CLI command like `sapir auth login`) and reload the editor.
+2. **If `list_models` returns empty**, MCP isn't wired — same fix.
+3. Use the balance ONLY for the low-balance check at this moment. **Never quote a "credits remaining" number later in the session** — coding/chat usage also deducts credits, so any remembered or computed balance is stale. Report only what each generation cost (`credits_used`); if the user asks what's left, run `check_credits` fresh right then.
 
-`generate_creative_director` — fire ONCE with `scene_count: 1–8`. **Never loop `generate_image` ≥2 times sequentially** — that's exactly what this tool replaces.
+If the user is on a whitelabel build (`sapir`, etc.), they must use their branded command — not `kolbo`. See `references/workflows/troubleshooting.md`.
 
-## The Three Modes
+## 🎬 Confirm the Creative Brief BEFORE Generating (CRITICAL — read first)
 
+Never fire a paid generation the moment the user says "make X". First **present the brief back as a confirmation the user can change** — this is the single most important interaction. It gives the user control over what gets created and what it costs, instead of silently spending credits on defaults.
+
+**Before ANY paid image / video / music / speech / 3D generation**, unless the user has *explicitly* dictated every key parameter in this message, ask ONE labeled question (the UI renders it as an options card) confirming:
+
+- **Model** — your recommended pick as the default option, plus 1–2 alternatives (with their credit cost).
+- **Aspect ratio** — e.g. `1:1 / 9:16 / 16:9` (offer the sensible default first).
+- **Count** — how many (1 / 4 / …).
+- **Resolution / quality / duration** — where the model supports it.
+- **Creative direction** — style / mood / scene, when the user was vague ("4 cats" → offer style options: photoreal / illustrated / cinematic / surprise-me).
+- **Credit cost** — state the total (`✦ N credits`) right in the question so cost is never a surprise.
+
+Then generate **only** with the confirmed parameters. If the user changes an option, use the change. This mirrors the approval-card flow: propose → let them adjust → confirm → generate.
+
+**Only skip the brief confirmation when** the user's message already pins model + aspect + count + creative direction (e.g. "generate 4 photoreal tabby cats, 1:1, z-image/turbo") — then just state the cost one-liner and fire. A low credit cost is **not** a reason to skip: cheap ≠ no-confirmation. What matters is whether the user actually chose the parameters.
+
+For multi-scene / batch work this pairs with `generate_creative_director` (see below) — still confirm the brief first.
+
+## ⚠️ Visual DNA `@Name` in the prompt (HARD RULE — always on)
+
+Passing `visual_dna_ids` is **not enough**. For every DNA in that array you MUST also write `@ExactStoredName` in the prompt text (the `name` from `list_visual_dnas` / `create_visual_dna`). The engine binds identity by parsing `@tags`. No `@tag` → the DNA is wasted.
+
+- Right: `visual_dna_ids: ["vdna_…"]` + prompt `@Zohar walks into frame`
+- Wrong: `Zohar's`, `Zohar`, `the left man`, `the man on the LEFT`, `Visual DNA anchors: the man on the LEFT…` — none of these bind
+- Never invent a role label or possessive as a substitute for `@Name`
+- Same rule for moodboards: `#ExactBoardName`
+
+Resolve names with `list_visual_dnas` first. Full binding rules: `references/workflows/visual-dna.md`.
+
+## 📁 Projects — Where Work Lands (CRITICAL)
+
+Everything in Kolbo — sessions, generations, media, docs — lives inside a PROJECT. Getting this wrong is the #1 user complaint ("my work went to the wrong project").
+
+1. **User names a project** ("in my Acme project", "for the film") → call `list_projects` ONCE to resolve the name to an ObjectId, then pass that **same** id as `project_id` on **EVERY** subsequent `generate_*` / `upload_media` / `create_doc` / `chat_send_message` call in **this conversation**. There is no server-side sticky store — omitting it on any later call silently lands in the default "API Generations" bucket (`is_default: true`). Once resolved, treat that id as required for the rest of the conversation. Accounts often hold hundreds of projects, so pass `list_projects({ search: "acme" })` rather than listing everything; the list is paginated (50/page) and hides archived projects unless you pass `include_archived: true`.
+2. **No project mentioned** → omit `project_id`; the default bucket is correct. Don't ask unless intent is ambiguous. If `list_sessions` already returned a `project_id` for the work you are continuing, keep passing that id.
+3. **Work landed in the wrong project? MOVE it, never regenerate**: `move_session` relocates a whole session + all its media (works for any session type — the `session_id` from generation responses, chats, transcriptions); `move_media` / `bulk_move_media` / `move_folder_contents` relocate individual media items. Empty leftover sessions after a move: `delete_session` (soft-delete; `restore_session` undoes it). `rename_session` only changes the sidebar title.
+
+## Cost Awareness — Quick Rules
+
+Full tables + formulas in `references/workflows/cost-and-validation.md`. Quick rules:
+
+- **Skip the brief/cost confirmation ONLY** when the user's message already pins model + count + aspect + creative direction (see "Confirm the Creative Brief" above). Low cost alone is **not** a reason to skip — cheap generations still get the one labeled confirmation unless the user chose the parameters.
+- **Otherwise confirm** via the labeled-question card: the parameters + the credit cost, suggest a cheaper alternative if one fits, wait for the user's pick. Never fire on defaults the user didn't choose.
+- **Batch totalling 100+ credits**: run `check_credits` first.
+- **Quote real cost**: after firing, log `credits_used` (from the tool result) to `.kolbo/production.md` — never `base × count`.
+- **Never state "credits remaining" from arithmetic** (opening balance − generation costs). Coding/chat usage deducts credits too, so the math is always wrong. Report cost only; if the user asks for their balance, call `check_credits` fresh at that moment.
+
+## 🛑 Runaway-Loop Guard — ONE Generation per Requested Item (CRITICAL)
+
+When the user asks for **one specific change**, the answer is **a single tool call**. After URLs return, **stop**. Surface and wait.
+
+You are NOT allowed to:
+- Fire the same tool 3+ times in a single turn unless the user explicitly asked for "N variations".
+- Re-fire because you think the result might not be exactly what the user wanted.
+- Auto-retry on success.
+- Fire 5+ parallel `generate_video*` calls speculatively.
+
+**Only re-fire when:** user explicitly asked for variations with a count, OR previous call returned `failure.retryable === true` (ONE retry), OR previous call returned `completed` but `urls.length === 0` (ONE retry).
+
+## ⚠️ Detecting Failed Generations (CRITICAL)
+
+A generation can fail three ways. Treat ALL as failure:
+
+1. **Tool returns `error`** — explicit. Surface, suggest retry, log `generation_id`.
+2. **Tool returns `completed` but `urls` is empty** — silent failure (NSFW filter, model OOM, upstream 5xx). Tell user "completed without an output — retrying" and re-fire ONCE. Do NOT log to `.kolbo/production.md`. Do NOT claim it worked.
+3. **Tool hangs / never returns** — MCP poll timed out. Call `get_generation_status(generation_id, wait=true)` IMMEDIATELY. The server might be done.
+
+**Always:**
+- Don't celebrate before reading the result. Verify `urls` is non-empty.
+- Don't auto-retry without surfacing the failure. Partial batches: list failed items + reasons + successful count. Never "✅ all done!" on partials.
+- Don't log failed items to `.kolbo/production.md`. Only successes.
+- Surface the user's count. "6 of 8 ready", not "videos ready".
+
+`failure` envelope structure + retry rules: `references/workflows/troubleshooting.md`.
+
+## ⚠️ Generated URLs in Chat (CRITICAL)
+
+Chat renders markdown natively. `![alt](url)` = inline image. `[label](url)` = labeled link with preview.
+
+- **Catalog-style replies** (numbered lists of characters / scenes / products): embed `![alt](url)` so each item shows inline.
+- **Conversational replies** ("4 shots ready"): keep prose short; canvas chip already shows gallery.
+
+Avoid bare URL dumps and HTML `<table>` grids — canvas already provides a gallery.
+
+**After `generate_creative_director` completes** — share results as individual URLs, one per scene. Do NOT create an HTML grid artifact.
+
+**Always** record every URL in `.kolbo/production.md` — see `references/workflows/production-log.md`.
+
+<!-- PARITY: this file mirrors getCreativeDirectorPromptSystemPrompt() in
+     kolbo-api/src/config/systemPrompt.js (lines ~1062–1155).
+     When that function changes, update this file in the same session. -->
+
+## Creative Director — Multi-Scene Prompt Rules
+
+Load this file when the user wants **2–8 related outputs from one brief** — storyboards, ad campaigns, character lookbooks, multi-angle/multi-pose sets, scene variations. For single-image work see `models/gpt-image.md` / `models/nano-banana.md`. For single-clip video see `models/seedance.md` / `models/veo.md`.
+
+**Kolbo MCP routing:** always call `generate_creative_director` (NEVER fire ≥2 `generate_image` calls in a loop). Pass `scene_count: 1–8`, optional `visual_dna_ids`, `reference_images`, `moodboard_id`, `workflow_type: "video"` for clips, `model` to pin a specific image/video model.
+
+### What the Creative Director Tool Is
+
+A multi-scene batch generator. Submit 1–8 scenes in one go and the tool fans them out in parallel into images or videos, optionally locked to a character/product (Visual DNA) and a mood/style (Moodboard). Total wall time = slowest scene, not the sum.
+
+#### The Three Modes
 - **Photo Auto Pilot** — each scene = one image. Optional reference images for style/subject. Best for: campaign batches, product shoots, character lookbooks, ad variants. Pass `workflow_type: "image"` (or omit — image is default).
 - **Video Auto Pilot** — each scene = one short video clip. Optional reference image per scene anchors the starting frame. Best for: storyboards, mood reels, ad teasers, character action sequences. Pass `workflow_type: "video"`.
 - **Cinema Manual** — per-scene **first frame + last frame** + per-scene prompt. Full cinematic control over composition transitions. Best for: hero shots, controlled camera moves, deliberate edits.
 
-## Identity & Style Locks
-
-- **Visual DNA** — attach a character/product preset via `visual_dna_ids` to lock identity across all scenes. Up to **8 DNAs** active at once (main character + product + side character). Always tag inside the prompt with `@<dna-name>`. See **Visual DNA Reference** below for the full naming/usage rules.
+#### Identity & Style Locks
+- **Visual DNA** — attach a character/product preset via `visual_dna_ids` to lock identity across all scenes. Up to **8 Visual DNAs** can be active at once (e.g. main character + product + side character). See `workflows/visual-dna.md` for the `@name` syntax — every DNA must be tagged inside the prompt.
 - **Moodboard** — attach `moodboard_id` (or `moodboard_ids`) for a curated mood/style reference that anchors the aesthetic of the whole batch.
-- When the user mentions a recurring character/product, **ask** if they want to use a Visual DNA. Same for a consistent aesthetic → recommend a Moodboard.
+- When the user mentions a recurring character/product, **ask** if they want to use a Visual DNA and recommend it. Same for a consistent aesthetic → recommend a Moodboard.
 
-## CRITICAL Kolbo Platform Rules
+### CRITICAL Kolbo Platform Rules
 
 - **Aspect ratio and resolution are MCP-tool params** (`aspect_ratio`, `resolution`) — NEVER include "16:9", "9:16", "1024x1536", "2K", or any size syntax inside the scene prompts.
 - **Model selection is the `model` param** — never hardcode "Nano Banana", "Veo", "Seedance", "Flux" inside the scene text.
-- **Never pass `num_images`** — use `scene_count` (1–8). `num_images` is for `generate_image` (same prompt, different seeds).
 - Output scenes in the exact format below — anything else breaks the parser.
+- **Never pass `num_images` to `generate_creative_director`** — use `scene_count` (1–8). `num_images` is for `generate_image` (same prompt, different seeds).
 
-## The Output Format (non-negotiable)
+### The Output Format (non-negotiable)
 
 All scenes go in **ONE fenced code block** in this exact shape:
 ```
@@ -65,17 +168,17 @@ Scene 3: <prompt for scene 3>
 ...
 ```
 - One scene per line. Each line starts with `Scene N:` followed by a single concise prompt.
-- **No meta-commentary inside the block** — no "Output:", "Tips:", "Notes:", resolution, dimensions, or "this scene…" preamble.
+- **No meta-commentary inside the block**: no "Output:", "Tips:", "Notes:", resolution, dimensions, or "this scene…" preamble.
 - Number sequentially from 1. Hard cap at 8 scenes.
 
-## How to Build the Batch
+### How to Build the Batch
 
-### Step 1 — Pick the right mode
+#### Step 1 — Pick the right mode
 - Single static asset per scene → **Photo Auto Pilot**
 - Motion / camera moves → **Video Auto Pilot**
 - Controlled first→last frame transitions → **Cinema Manual**
 
-### Step 2 — Decide the narrative arc
+#### Step 2 — Decide the narrative arc
 A great batch isn't 8 random shots — it's a sequence with intent. Pick one structure:
 - **Campaign**: establishing → product hero → lifestyle → detail → close
 - **Storyboard**: setup → inciting action → escalation → climax → resolution
@@ -83,29 +186,30 @@ A great batch isn't 8 random shots — it's a sequence with intent. Pick one str
 - **Ad concept**: hook → tension → reveal → CTA
 - **Variant exploration**: same concept, varying angle/lighting/mood/palette
 
-### Step 3 — Write each scene under the right framework
+#### Step 3 — Write each scene under the right framework
 
-**Photo Auto Pilot scene** (image instruction):
+**Photo Auto Pilot scene prompt** (image instruction):
 - Vary at least one axis between scenes: angle, lighting, mood, framing, palette.
 - Concise: 1–3 sentences. Concept-led, not keyword soup.
 - Subject + Action + Setting + Style cue.
-- If a Visual DNA is attached, refer to the subject by `@<dna-name>` — the DNA does identity work, don't re-describe every scene.
+- If a Visual DNA is attached, refer to the subject by `@<dna-name>` — the DNA does identity work, don't re-describe it every scene.
 
-**Video Auto Pilot scene** (motion instruction):
+**Video Auto Pilot scene prompt** (motion instruction):
 - The model can see the reference image — **describe what happens, not what's already there**.
 - Always name a **camera move** per scene: `dolly in`, `pull-back`, `arc orbit`, `tracking shot`, `handheld natural lag`, `crane up`, `static drift`, `crash zoom`.
 - Format: `<action> + <camera move>`. Short and action-led.
+- Don't re-describe what the image already shows; describe the verb.
 
-**Cinema Manual scene** (transition instruction):
+**Cinema Manual scene prompt** (transition instruction):
 - The user provides first frame + last frame. Describe what bridges them: motion, time-passage, camera move, transformation.
 - Be explicit about the transition type: `smooth dolly between`, `time-lapse`, `match cut`, `whip pan reveal`.
 
-### Step 4 — Apply consistency rules
-- Recurring subject: same noun across scenes ("the woman", "the bottle") OR same `@<dna-name>` consistently. Don't rename her in scene 4.
-- Recurring location: same world descriptors throughout.
+#### Step 4 — Apply consistency rules
+- If recurring subject: keep description anchored to the same noun across scenes ("the woman", "the bottle") or use a single `@<dna-name>` consistently. Don't rename her in scene 4.
+- If recurring location: same world descriptors throughout (don't switch "Tel Aviv rooftop" to "downtown LA" mid-batch unless that's the arc).
 - Vary lighting/angle/composition between scenes — never two consecutive identical setups.
 
-## Output Discipline
+### Output Discipline
 
 - Final scenes in ONE fenced code block in `Scene N:` format. **No model names, no resolutions, no aspect ratios inside scenes.**
 - When summarizing the call to the user, state separately:
@@ -116,54 +220,16 @@ A great batch isn't 8 random shots — it's a sequence with intent. Pick one str
   - **Why this arc works:** 1 line on the narrative choice
 - Reply explanations in the user's language; scenes themselves in English.
 
-## After Generation
+### After Generation
 
-**Share results as individual URLs, one per scene. Do NOT create an HTML grid artifact or any combined layout.** Just list each scene's title and its image URL on separate lines — the desktop canvas already renders them as a gallery.
+**Share results as individual URLs, one per scene. Do NOT create an HTML grid artifact or any combined layout.** Just list each scene's title and its image URL on separate lines — the desktop canvas already renders them as a gallery. See SKILL.md "Generated URLs in chat".
 
-## Character-Driven Video — Frames First
+### Character-Driven Video — Frames First
 
-For any ad / story / scene-based video **created from scratch** featuring a Visual DNA character, do NOT jump straight from DNA to per-shot video. The right flow:
+For any ad / story / scene-based video **created from scratch** featuring a Visual DNA character, do NOT jump straight from DNA to per-shot video. The right flow is:
 
-1. **Generate the shot frames first** as still images via `generate_creative_director` with `scene_count` + `visual_dna_ids` + `workflow_type: "image"`. DNA is strongest in image generation; user can approve cheaply.
-2. **Confirm the frames with the user** if there are more than ~3 shots.
-3. **Animate each frame** via `generate_video_from_image` (kolbo-generate), one call per frame fired in parallel.
+1. **Generate the shot frames first** as still images via `generate_creative_director` with `scene_count` + `visual_dna_ids` + `workflow_type: "image"`. DNA is strongest in image generation; the user can approve cheaply before any expensive video runs.
+2. **Confirm the frames with the user** if there are more than ~3 shots, or if the user hasn't said "go straight to video."
+3. **Animate each frame** with `generate_video_from_image`, passing each approved frame as `image_url`.
 
-Skip frames-first only when the user says "go straight to video", on single-shot quick experiments, or when the user supplies their own approved frames.
-
-## Visual DNA Reference (self-contained)
-
-When passing `visual_dna_ids`, the prompt MUST tag each DNA by `@<exact-name>` — the literal `name` field. Without `@name`, the engine guesses, drops, or blends DNAs.
-
-**Naming rule for create_visual_dna — NO SPACES.** Single token, lowercase, ASCII-safe: `esther_model`, `dana`, `tokyo_neon`, `brand_red`. Never `Sarah Johnson`. Reason: the prompt parser stops `@<token>` at the first space.
-
-**Pre-flight:** ALWAYS call `list_visual_dnas` first to verify the DNA exists. If no match, STOP and ask the user before generating.
-
-**Multi-DNA example in a scene:**
-```
-Scene 1: @maya at @cafe counter, soft morning light, medium shot
-Scene 2: @maya walking past @cafe windows, golden hour, wide shot
-```
-with `visual_dna_ids: ["vdna_maya", "vdna_cafe"]`.
-
-**Reference tags** (for plain images / videos / audio):
-- `@image1`, `@image2`, … = position in `reference_images`
-- `@video1`, `@video2`, … = position in `reference_videos`
-- `@Audio1`, `@Audio2`, … = position in `reference_audio`
-
-For full Visual DNA training and creation rules, see the `kolbo-visual-dna` skill.
-
-## Parameter Gotcha
-
-| Tool | Param | Meaning |
-|---|---|---|
-| `generate_image` | `num_images` (1–4) | Same prompt, different seeds — "give me 4 variations of THIS exact image" |
-| `generate_creative_director` | `scene_count` (1–8) | Each scene gets its own distinct prompt — "make 8 different campaign shots" |
-
-**Never pass `num_images` to `generate_creative_director`.** **Never loop `generate_image` sequentially when you want a related set — use Creative Director instead.**
-
-## UX Rules
-
-1. **Default to this skill for any multi-output request.** Don't fire ≥2 `generate_image` calls without checking if Creative Director is the right fit first.
-2. **Pick a narrative arc explicitly** (campaign / storyboard / lookbook / ad concept / variants) — don't generate random scenes.
-3. **One labeled-option question max** before firing if defaults aren't clear (mode, model preference).
-4. **Always tag Visual DNAs** with `@name` in every scene.
+Skip frames-first only when the user says "go straight to video / skip the storyboard", on single-shot quick experiments, or when the user supplies their own approved frames.

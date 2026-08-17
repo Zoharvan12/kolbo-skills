@@ -1,5 +1,5 @@
 ---
-version: 0.4.0
+version: 0.8.4
 name: kolbo-marketing-studio
 description: |
   Generate branded ad VIDEO — UGC, unboxing, tutorial, product review, TV spot,
@@ -24,18 +24,119 @@ argument-hint: "[mode] [brief] [--visual-dna-id <id>] [--product-image <path>]"
 allowed-tools: Bash, Read, Write, Edit
 ---
 
-# Kolbo Marketing Studio — UGC, Ads & Branded Video
+<!-- AUTO-GENERATED from kolbo-code packages/opencode/skills/kolbo — DO NOT EDIT.
+     Edit the canonical skill and let .github/workflows/sync-skill-to-plugin.yml regenerate this. -->
 
-Branded ad video generation. Mode-driven (9 modes), each routes to the right Kolbo MCP tool with the right defaults.
-
-For ad **images** see `kolbo-product-photoshoot`. For **marketplace listings** see `kolbo-marketplace-cards`. For composed brand ad images (brand kit + ad format + avatar + product) see `kolbo-dtc-ads`.
+# Kolbo Marketing Studio — UGC & Campaign Assets
 
 ## Step 0 — Bootstrap
 
-1. Run `check_credits` once per conversation. If it fails, ask the user to run `kolbo auth login`.
-2. Marketing video is video-priced (cr/s × duration); a 6s UGC on Seedance 2 = ~180 credits, on Veo 3.1 = comparable. Run `check_credits` before bulk runs.
+Once per conversation, before any other Kolbo tool call:
 
-## The 9 Marketing Modes
+1. **Run `check_credits`.** If it fails with "Session expired" / "Not authenticated", ask the user to run `kolbo auth login` (or their branded CLI command like `sapir auth login`) and reload the editor.
+2. **If `list_models` returns empty**, MCP isn't wired — same fix.
+3. Use the balance ONLY for the low-balance check at this moment. **Never quote a "credits remaining" number later in the session** — coding/chat usage also deducts credits, so any remembered or computed balance is stale. Report only what each generation cost (`credits_used`); if the user asks what's left, run `check_credits` fresh right then.
+
+If the user is on a whitelabel build (`sapir`, etc.), they must use their branded command — not `kolbo`. See `references/workflows/troubleshooting.md`.
+
+## 🎬 Confirm the Creative Brief BEFORE Generating (CRITICAL — read first)
+
+Never fire a paid generation the moment the user says "make X". First **present the brief back as a confirmation the user can change** — this is the single most important interaction. It gives the user control over what gets created and what it costs, instead of silently spending credits on defaults.
+
+**Before ANY paid image / video / music / speech / 3D generation**, unless the user has *explicitly* dictated every key parameter in this message, ask ONE labeled question (the UI renders it as an options card) confirming:
+
+- **Model** — your recommended pick as the default option, plus 1–2 alternatives (with their credit cost).
+- **Aspect ratio** — e.g. `1:1 / 9:16 / 16:9` (offer the sensible default first).
+- **Count** — how many (1 / 4 / …).
+- **Resolution / quality / duration** — where the model supports it.
+- **Creative direction** — style / mood / scene, when the user was vague ("4 cats" → offer style options: photoreal / illustrated / cinematic / surprise-me).
+- **Credit cost** — state the total (`✦ N credits`) right in the question so cost is never a surprise.
+
+Then generate **only** with the confirmed parameters. If the user changes an option, use the change. This mirrors the approval-card flow: propose → let them adjust → confirm → generate.
+
+**Only skip the brief confirmation when** the user's message already pins model + aspect + count + creative direction (e.g. "generate 4 photoreal tabby cats, 1:1, z-image/turbo") — then just state the cost one-liner and fire. A low credit cost is **not** a reason to skip: cheap ≠ no-confirmation. What matters is whether the user actually chose the parameters.
+
+For multi-scene / batch work this pairs with `generate_creative_director` (see below) — still confirm the brief first.
+
+## ⚠️ Visual DNA `@Name` in the prompt (HARD RULE — always on)
+
+Passing `visual_dna_ids` is **not enough**. For every DNA in that array you MUST also write `@ExactStoredName` in the prompt text (the `name` from `list_visual_dnas` / `create_visual_dna`). The engine binds identity by parsing `@tags`. No `@tag` → the DNA is wasted.
+
+- Right: `visual_dna_ids: ["vdna_…"]` + prompt `@Zohar walks into frame`
+- Wrong: `Zohar's`, `Zohar`, `the left man`, `the man on the LEFT`, `Visual DNA anchors: the man on the LEFT…` — none of these bind
+- Never invent a role label or possessive as a substitute for `@Name`
+- Same rule for moodboards: `#ExactBoardName`
+
+Resolve names with `list_visual_dnas` first. Full binding rules: `references/workflows/visual-dna.md`.
+
+## 📁 Projects — Where Work Lands (CRITICAL)
+
+Everything in Kolbo — sessions, generations, media, docs — lives inside a PROJECT. Getting this wrong is the #1 user complaint ("my work went to the wrong project").
+
+1. **User names a project** ("in my Acme project", "for the film") → call `list_projects` ONCE to resolve the name to an ObjectId, then pass that **same** id as `project_id` on **EVERY** subsequent `generate_*` / `upload_media` / `create_doc` / `chat_send_message` call in **this conversation**. There is no server-side sticky store — omitting it on any later call silently lands in the default "API Generations" bucket (`is_default: true`). Once resolved, treat that id as required for the rest of the conversation. Accounts often hold hundreds of projects, so pass `list_projects({ search: "acme" })` rather than listing everything; the list is paginated (50/page) and hides archived projects unless you pass `include_archived: true`.
+2. **No project mentioned** → omit `project_id`; the default bucket is correct. Don't ask unless intent is ambiguous. If `list_sessions` already returned a `project_id` for the work you are continuing, keep passing that id.
+3. **Work landed in the wrong project? MOVE it, never regenerate**: `move_session` relocates a whole session + all its media (works for any session type — the `session_id` from generation responses, chats, transcriptions); `move_media` / `bulk_move_media` / `move_folder_contents` relocate individual media items. Empty leftover sessions after a move: `delete_session` (soft-delete; `restore_session` undoes it). `rename_session` only changes the sidebar title.
+
+## Cost Awareness — Quick Rules
+
+Full tables + formulas in `references/workflows/cost-and-validation.md`. Quick rules:
+
+- **Skip the brief/cost confirmation ONLY** when the user's message already pins model + count + aspect + creative direction (see "Confirm the Creative Brief" above). Low cost alone is **not** a reason to skip — cheap generations still get the one labeled confirmation unless the user chose the parameters.
+- **Otherwise confirm** via the labeled-question card: the parameters + the credit cost, suggest a cheaper alternative if one fits, wait for the user's pick. Never fire on defaults the user didn't choose.
+- **Batch totalling 100+ credits**: run `check_credits` first.
+- **Quote real cost**: after firing, log `credits_used` (from the tool result) to `.kolbo/production.md` — never `base × count`.
+- **Never state "credits remaining" from arithmetic** (opening balance − generation costs). Coding/chat usage deducts credits too, so the math is always wrong. Report cost only; if the user asks for their balance, call `check_credits` fresh at that moment.
+
+## 🛑 Runaway-Loop Guard — ONE Generation per Requested Item (CRITICAL)
+
+When the user asks for **one specific change**, the answer is **a single tool call**. After URLs return, **stop**. Surface and wait.
+
+You are NOT allowed to:
+- Fire the same tool 3+ times in a single turn unless the user explicitly asked for "N variations".
+- Re-fire because you think the result might not be exactly what the user wanted.
+- Auto-retry on success.
+- Fire 5+ parallel `generate_video*` calls speculatively.
+
+**Only re-fire when:** user explicitly asked for variations with a count, OR previous call returned `failure.retryable === true` (ONE retry), OR previous call returned `completed` but `urls.length === 0` (ONE retry).
+
+## ⚠️ Detecting Failed Generations (CRITICAL)
+
+A generation can fail three ways. Treat ALL as failure:
+
+1. **Tool returns `error`** — explicit. Surface, suggest retry, log `generation_id`.
+2. **Tool returns `completed` but `urls` is empty** — silent failure (NSFW filter, model OOM, upstream 5xx). Tell user "completed without an output — retrying" and re-fire ONCE. Do NOT log to `.kolbo/production.md`. Do NOT claim it worked.
+3. **Tool hangs / never returns** — MCP poll timed out. Call `get_generation_status(generation_id, wait=true)` IMMEDIATELY. The server might be done.
+
+**Always:**
+- Don't celebrate before reading the result. Verify `urls` is non-empty.
+- Don't auto-retry without surfacing the failure. Partial batches: list failed items + reasons + successful count. Never "✅ all done!" on partials.
+- Don't log failed items to `.kolbo/production.md`. Only successes.
+- Surface the user's count. "6 of 8 ready", not "videos ready".
+
+`failure` envelope structure + retry rules: `references/workflows/troubleshooting.md`.
+
+## ⚠️ Generated URLs in Chat (CRITICAL)
+
+Chat renders markdown natively. `![alt](url)` = inline image. `[label](url)` = labeled link with preview.
+
+- **Catalog-style replies** (numbered lists of characters / scenes / products): embed `![alt](url)` so each item shows inline.
+- **Conversational replies** ("4 shots ready"): keep prose short; canvas chip already shows gallery.
+
+Avoid bare URL dumps and HTML `<table>` grids — canvas already provides a gallery.
+
+**After `generate_creative_director` completes** — share results as individual URLs, one per scene. Do NOT create an HTML grid artifact.
+
+**Always** record every URL in `.kolbo/production.md` — see `references/workflows/production-log.md`.
+
+## Marketing Studio — UGC, Ads & Branded Video
+
+Load this file when the user wants **branded ad video** — UGC, unboxing, product showcase, TV spot, virtual try-on, or any "make me an ad / commercial / creator video" request.
+
+For ad **images** (Pinterest pin, hero banner, ad creative pack) see `workflows/product-photoshoot.md`.
+For **marketplace listings** (Amazon main + secondary + A+ content) see `workflows/marketplace-cards.md`.
+For the **DTC ads engine flow** (brand kit + ad format + avatar + product) see `workflows/dtc-ads.md`.
+
+### The 9 Marketing Modes
 
 | Mode | What it's for | Hook/Setting allowed? |
 |---|---|:-:|
@@ -53,7 +154,7 @@ For ad **images** see `kolbo-product-photoshoot`. For **marketplace listings** s
 
 **Default when the user doesn't specify a mode:** `ugc`.
 
-## Picking the Mode
+### Picking the Mode
 
 | User phrasing | Mode |
 |---|---|
@@ -69,7 +170,7 @@ For ad **images** see `kolbo-product-photoshoot`. For **marketplace listings** s
 
 If the user mentions a product / brand but no mode word, default to `ugc`. If they say "ad" without "TV ad" / "commercial" / "broadcast", default to `ugc` (most modern ads are UGC-shaped).
 
-## Mode → Kolbo MCP Routing
+### Mode → Kolbo MCP Routing
 
 The mode determines which Kolbo MCP tool to call, what defaults to set, and what's forbidden.
 
@@ -83,7 +184,7 @@ The mode determines which Kolbo MCP tool to call, what defaults to set, and what
 
 **Pick the actual model** with `list_models({ type: "..." })` and validate caps before firing — see SKILL.md "Resolution / Aspect / Duration — validate against caps".
 
-## UGC Family Defaults (CRITICAL)
+### UGC Family Defaults (CRITICAL)
 
 When ANY `ugc*` mode is selected, snap to these unless the user explicitly overrides:
 
@@ -102,7 +203,7 @@ When ANY `ugc*` mode is selected, snap to these unless the user explicitly overr
 
 **Phrases that OVERRIDE UGC defaults** (use them as-given, not as UGC): "commercial", "ad spot" (without UGC), "cinematic", "broadcast", "TV ad", "horizontal", "16:9", "landscape", "billboard". When the user uses one of these, switch to `product_showcase` or `tv_spot` mode.
 
-## Hooks & Settings (concept)
+### Hooks & Settings (concept)
 
 Hooks and settings are **reusable opening angles / scene contexts** that get prepended to the user's prompt. Kolbo does not yet expose these as first-class MCP primitives, but the concept is portable:
 
@@ -115,29 +216,29 @@ Hooks and settings are **reusable opening angles / scene contexts** that get pre
 
 **Mutually exclusive with ad references** (next section). Pick one path per generation.
 
-## Ad References (modeling new ads after existing ones)
+### Ad References (modeling new ads after existing ones)
 
 Sometimes the user has a reference ad they want to model the new ad after — their own previous winning ad, a competitor's ad, or a viral video. Kolbo path:
 
 1. **Upload the reference video** via `upload_media` (returns CDN URL).
 2. **Pass it as `reference_videos`** to `generate_elements`, OR as `source_video` to `generate_video_from_video` (if you want to actually restyle / re-shoot the reference).
 3. **Describe in the prompt** what to preserve from the reference (`@video1`'s pacing / camera move / lighting / cut rhythm) and what to change (subject / product / setting).
-4. **Tag with `@video1`** per the `kolbo-visual-dna` skill reference-tagging rules.
+4. **Tag with `@video1`** per `workflows/visual-dna.md` reference-tagging rules.
 
 **Mutually exclusive with hooks/settings** — pick one composition path per generation. Either reference-driven (use `@video1`) or composed-from-blocks (hook + setting + product). Mixing produces muddled output.
 
-## Avatars (= Visual DNA characters)
+### Avatars (= Visual DNA characters)
 
 What other platforms call "preset avatars" or "custom avatars" Kolbo calls **Visual DNA characters**. Two ways to get one:
 
 - **Existing character** — use `list_visual_dnas` to find one the user has already created.
-- **New character** — create with `create_visual_dna({ type: "character", name, images: [...] })`. See the `kolbo-visual-dna` skill for the full creation flow (pre-flight, naming rule, generate-reference-images-first).
+- **New character** — create with `create_visual_dna({ type: "character", name, images: [...] })`. See `workflows/visual-dna.md` for the full creation flow (pre-flight, naming rule, generate-reference-images-first).
 
 **For UGC modes:** an avatar is optional if the brief clearly mentions a person (the model can synthesize one). Pass `visual_dna_ids` when the user wants a *specific* presenter — their face, the brand founder, a previously trained character.
 
-**Always use `@<dna-name>` in the prompt** when passing `visual_dna_ids` — see the `kolbo-visual-dna` skill `@name` rules.
+**Always use `@<dna-name>` in the prompt** when passing `visual_dna_ids` — see `workflows/visual-dna.md` `@name` rules.
 
-## Products (image upload + reference)
+### Products (image upload + reference)
 
 For ads that feature a specific product:
 
@@ -146,9 +247,71 @@ For ads that feature a specific product:
 3. **Tag with `@image1`** in the prompt.
 4. **Log in `.kolbo/production.md`** under a `### Products` subsection so future ads in the same workspace reuse the same CDN URL (don't re-upload).
 
-If the user gives a **product URL** instead of a photo, do brand research first: `WebFetch` the page to extract title + value prop + hero image URLs + brand colors (hex codes from inline `style=` / `<style>` / linked CSS). Re-host every external image via `upload_media` so it works as a Kolbo CDN reference. Persist the brand identity to `.kolbo/brand-kits/SLUG.md` (slug = lowercased single-token domain) so future generations can reuse without re-scraping.
+If the user gives a **product URL** instead of a photo, see `workflows/research-first.md` — scrape, extract images, re-host via `upload_media`, persist as a brand kit at `.kolbo/brand-kits/<slug>.md`.
 
-## UX Rules
+<!-- SKILL-ONLY: no server parity — UGC output routes through the creative-director / veo / seedance enhancers, so any server-side rule lives in those parity files, not here. -->
+
+### Multi-Slot Board Method (structured shot specs + character consistency)
+
+For any multi-shot UGC / review / how-to where the SAME presenter must stay identical across shots, compose the prompt as explicit **slots** and lock identity with a **board-first** pass. This is a prompt-only convention — no special MCP mode; it uses `generate_image` (board) + `generate_elements` / `generate_video_from_image` (per-slot animate) that already exist.
+
+#### 1. Structured input slots
+
+Define each shot as one row. Fill every column before generating — blanks are where identity/quality drift creeps in.
+
+| Slot | Arc role | POV / framing | Presenter action | Product visibility | Aspect | Audio |
+|---|---|---|---|:-:|:-:|:-:|
+| 1 | hook | selfie arm, chest-up, eye contact | states the problem / grabs attention | held up to camera | 9:16 | monologue seg 1 |
+| 2 | demo | slightly wider, hands in frame | uses / demonstrates the product | in active use | 9:16 | monologue seg 2 |
+| 3 | payoff | back to selfie framing | reaction + soft CTA | resting in hand / on surface | 9:16 | monologue seg 3 |
+
+Scale to 2–6 slots. Keep `hook → demo → payoff` as the minimum arc; add `tension` / `proof` slots between demo and payoff for longer reviews.
+
+#### 2. Rendering rules (hard invariants — apply to EVERY slot)
+
+- One aspect ratio across all slots (UGC = `9:16`). Never mix.
+- **No on-image text**, captions, subtitles, watermarks, or lower-thirds (users add captions in post).
+- **Identity lock**: same presenter, same wardrobe, same lighting environment across all slots — open the prompt with `same character throughout all shots`.
+- Hands and product must read cleanly — no deformed hands, no floating / clipping product, product logo legible when held.
+- Phone-shot aesthetic (handheld sway, window/screen key) unless the mode is polished (`tv_spot`, `product_showcase`).
+
+#### 3. Board-first consistency (the grid technique)
+
+Before animating, generate ONE composite board image that locks the presenter's identity, then animate each panel:
+
+1. `generate_image` a labeled N-panel grid (2×2 or 1×N) of the presenter across the slot poses — front hook pose, hands-on-product demo pose, reaction pose — locked to `visual_dna_ids` (the presenter's Visual DNA). Aspect `16:9` for the board sheet.
+2. Treat that board image's CDN URL as the **`board_media_id`** — the single source of truth for identity.
+3. Animate each slot with `generate_video_from_image` / `generate_elements`, passing the board panel (and product) as `reference_images` and tagging `@image1`, so every clip inherits the same face/wardrobe.
+
+This mirrors how the best UGC pipelines keep a character consistent: lock once as a board, then move each shot — not N independent generations that drift.
+
+#### 4. Structured parameters (what to carry per generation)
+
+Track these so each slot's call is reproducible and the arc stays coherent:
+
+| Param | Meaning | Maps to |
+|---|---|---|
+| `arc_role` | hook / tension / demo / proof / payoff | prompt framing + shot order |
+| `board_media_id` | the locked board image URL | `reference_images` (`@image1`) |
+| `character_media_id` / `visual_dna_id` | presenter identity | `visual_dna_ids` (`@<dna-name>`) |
+| `product_media_id` | product photo URL | `reference_images` (`@image2`) |
+| `input_tier` | `draft` (fast preview) vs `hero` (final) | model + resolution choice |
+| `monologue_segment` | the spoken line for this slot | prompt audio/dialogue line |
+| `aspect_ratio` / `duration` / `sound_enabled` | per UGC Family Defaults above | MCP call args |
+
+#### 5. Worked example (brief → slots → board → clips)
+
+Brief: *"15s UGC review of a skincare serum, tech-savvy woman creator."*
+
+1. Ensure/create presenter Visual DNA (tech-savvy woman) → `visual_dna_id`.
+2. Board: `generate_image` a 3-panel `16:9` sheet — (a) chest-up hook holding the serum, (b) hands applying it, (c) thumbs-up reaction — `same character throughout all shots`, locked to the DNA. → `board_media_id`.
+3. Slots (each `9:16`, ~5s, sound OFF, animate from the matching board panel + product `@image2`):
+   - Slot 1 (hook): "Before this serum my routine was five products…" holding it to camera.
+   - Slot 2 (demo): hands applying, product in active use.
+   - Slot 3 (payoff): reaction + "…now it's just one step." soft CTA.
+4. Deliver as a structured message (setup + monologue + media), humanized refs (names/thumbnails, not raw IDs).
+
+### UX Rules
 
 1. **Always pick a mode explicitly.** Don't auto-pick from one ambiguous word. If the user said "make me an ad" with no other signal, offer labeled options: `[UGC / TV Spot / Product Showcase / Surprise me]`.
 2. **Always confirm aspect ratio + duration + sound** before firing — these materially change output and cost. One question, labeled options.
@@ -156,7 +319,7 @@ If the user gives a **product URL** instead of a photo, do brand research first:
 4. **No auto-retry on failure.** If the generation fails (content policy, model OOM), surface the reason and let the user adjust prompt or product.
 5. **Show results without dumping URLs** — see SKILL.md "Generated URLs in chat".
 
-## Prompt Template Seed for UGC
+### Prompt Template Seed for UGC
 
 ```
 UGC selfie video, vertical 9:16, handheld phone aesthetic.
@@ -170,7 +333,7 @@ Style: authentic creator content, NOT polished commercial.
 Sound: ambient room tone only, no music, no SFX overlay.
 ```
 
-## Prompt Template Seed for TV Spot
+### Prompt Template Seed for TV Spot
 
 ```
 3-shot broadcast commercial, cinematic 16:9.

@@ -72,7 +72,7 @@ Example: `The camera performs a smooth 180-degree arc shot, starting with the fr
 
 ### 2. Ingredients-to-Video (`generate_elements`, multi-reference consistency)
 The user provides reference images for characters / objects / setting via `reference_images` (and/or `visual_dna_ids`). The prompt references each one and describes the scene.
-- Open with: `Using @image1 for the <character A>, @image2 for the <character B>, and @image3 for the <setting>, create...` — see the `kolbo-visual-dna` skill for tag rules.
+- Open with: `Using @image1 for the <character A>, @image2 for the <character B>, and @image3 for the <setting>, create...` — see `workflows/visual-dna.md` for tag rules.
 - Then describe shot type + action + dialogue + audio.
 - Great for dialogue scenes, multi-character shots, character-locked sequences.
 

@@ -1,5 +1,5 @@
 ---
-version: 0.4.0
+version: 0.8.4
 name: kolbo-dtc-ads
 description: |
   Compose a brand ad IMAGE from 5 building blocks: brand kit + ad format
@@ -22,16 +22,115 @@ argument-hint: "[format] [brief] [--brand-kit SLUG] [--avatar <vdna_id>] [--prod
 allowed-tools: Bash, Read, Write, Edit
 ---
 
-# Kolbo DTC Ads — Composed Brand Image Workflow
+<!-- AUTO-GENERATED from kolbo-code packages/opencode/skills/kolbo — DO NOT EDIT.
+     Edit the canonical skill and let .github/workflows/sync-skill-to-plugin.yml regenerate this. -->
 
-For ad **video** see `kolbo-marketing-studio`. For brand **product imagery** (Pinterest pin, hero banner, ad pack) see `kolbo-product-photoshoot`. For marketplace listings see `kolbo-marketplace-cards`.
+# Kolbo DTC Ads
 
 ## Step 0 — Bootstrap
 
-1. Run `check_credits` once per conversation. If it fails, ask the user to run `kolbo auth login`.
-2. DTC ad images bill per generation (flat). Nano Banana 2 = ~8 cr at 1K, scaling with resolution multiplier. Run `check_credits` before bulk ad-pack runs (≥4 images).
+Once per conversation, before any other Kolbo tool call:
 
-## What This Is
+1. **Run `check_credits`.** If it fails with "Session expired" / "Not authenticated", ask the user to run `kolbo auth login` (or their branded CLI command like `sapir auth login`) and reload the editor.
+2. **If `list_models` returns empty**, MCP isn't wired — same fix.
+3. Use the balance ONLY for the low-balance check at this moment. **Never quote a "credits remaining" number later in the session** — coding/chat usage also deducts credits, so any remembered or computed balance is stale. Report only what each generation cost (`credits_used`); if the user asks what's left, run `check_credits` fresh right then.
+
+If the user is on a whitelabel build (`sapir`, etc.), they must use their branded command — not `kolbo`. See `references/workflows/troubleshooting.md`.
+
+## 🎬 Confirm the Creative Brief BEFORE Generating (CRITICAL — read first)
+
+Never fire a paid generation the moment the user says "make X". First **present the brief back as a confirmation the user can change** — this is the single most important interaction. It gives the user control over what gets created and what it costs, instead of silently spending credits on defaults.
+
+**Before ANY paid image / video / music / speech / 3D generation**, unless the user has *explicitly* dictated every key parameter in this message, ask ONE labeled question (the UI renders it as an options card) confirming:
+
+- **Model** — your recommended pick as the default option, plus 1–2 alternatives (with their credit cost).
+- **Aspect ratio** — e.g. `1:1 / 9:16 / 16:9` (offer the sensible default first).
+- **Count** — how many (1 / 4 / …).
+- **Resolution / quality / duration** — where the model supports it.
+- **Creative direction** — style / mood / scene, when the user was vague ("4 cats" → offer style options: photoreal / illustrated / cinematic / surprise-me).
+- **Credit cost** — state the total (`✦ N credits`) right in the question so cost is never a surprise.
+
+Then generate **only** with the confirmed parameters. If the user changes an option, use the change. This mirrors the approval-card flow: propose → let them adjust → confirm → generate.
+
+**Only skip the brief confirmation when** the user's message already pins model + aspect + count + creative direction (e.g. "generate 4 photoreal tabby cats, 1:1, z-image/turbo") — then just state the cost one-liner and fire. A low credit cost is **not** a reason to skip: cheap ≠ no-confirmation. What matters is whether the user actually chose the parameters.
+
+For multi-scene / batch work this pairs with `generate_creative_director` (see below) — still confirm the brief first.
+
+## ⚠️ Visual DNA `@Name` in the prompt (HARD RULE — always on)
+
+Passing `visual_dna_ids` is **not enough**. For every DNA in that array you MUST also write `@ExactStoredName` in the prompt text (the `name` from `list_visual_dnas` / `create_visual_dna`). The engine binds identity by parsing `@tags`. No `@tag` → the DNA is wasted.
+
+- Right: `visual_dna_ids: ["vdna_…"]` + prompt `@Zohar walks into frame`
+- Wrong: `Zohar's`, `Zohar`, `the left man`, `the man on the LEFT`, `Visual DNA anchors: the man on the LEFT…` — none of these bind
+- Never invent a role label or possessive as a substitute for `@Name`
+- Same rule for moodboards: `#ExactBoardName`
+
+Resolve names with `list_visual_dnas` first. Full binding rules: `references/workflows/visual-dna.md`.
+
+## 📁 Projects — Where Work Lands (CRITICAL)
+
+Everything in Kolbo — sessions, generations, media, docs — lives inside a PROJECT. Getting this wrong is the #1 user complaint ("my work went to the wrong project").
+
+1. **User names a project** ("in my Acme project", "for the film") → call `list_projects` ONCE to resolve the name to an ObjectId, then pass that **same** id as `project_id` on **EVERY** subsequent `generate_*` / `upload_media` / `create_doc` / `chat_send_message` call in **this conversation**. There is no server-side sticky store — omitting it on any later call silently lands in the default "API Generations" bucket (`is_default: true`). Once resolved, treat that id as required for the rest of the conversation. Accounts often hold hundreds of projects, so pass `list_projects({ search: "acme" })` rather than listing everything; the list is paginated (50/page) and hides archived projects unless you pass `include_archived: true`.
+2. **No project mentioned** → omit `project_id`; the default bucket is correct. Don't ask unless intent is ambiguous. If `list_sessions` already returned a `project_id` for the work you are continuing, keep passing that id.
+3. **Work landed in the wrong project? MOVE it, never regenerate**: `move_session` relocates a whole session + all its media (works for any session type — the `session_id` from generation responses, chats, transcriptions); `move_media` / `bulk_move_media` / `move_folder_contents` relocate individual media items. Empty leftover sessions after a move: `delete_session` (soft-delete; `restore_session` undoes it). `rename_session` only changes the sidebar title.
+
+## Cost Awareness — Quick Rules
+
+Full tables + formulas in `references/workflows/cost-and-validation.md`. Quick rules:
+
+- **Skip the brief/cost confirmation ONLY** when the user's message already pins model + count + aspect + creative direction (see "Confirm the Creative Brief" above). Low cost alone is **not** a reason to skip — cheap generations still get the one labeled confirmation unless the user chose the parameters.
+- **Otherwise confirm** via the labeled-question card: the parameters + the credit cost, suggest a cheaper alternative if one fits, wait for the user's pick. Never fire on defaults the user didn't choose.
+- **Batch totalling 100+ credits**: run `check_credits` first.
+- **Quote real cost**: after firing, log `credits_used` (from the tool result) to `.kolbo/production.md` — never `base × count`.
+- **Never state "credits remaining" from arithmetic** (opening balance − generation costs). Coding/chat usage deducts credits too, so the math is always wrong. Report cost only; if the user asks for their balance, call `check_credits` fresh at that moment.
+
+## 🛑 Runaway-Loop Guard — ONE Generation per Requested Item (CRITICAL)
+
+When the user asks for **one specific change**, the answer is **a single tool call**. After URLs return, **stop**. Surface and wait.
+
+You are NOT allowed to:
+- Fire the same tool 3+ times in a single turn unless the user explicitly asked for "N variations".
+- Re-fire because you think the result might not be exactly what the user wanted.
+- Auto-retry on success.
+- Fire 5+ parallel `generate_video*` calls speculatively.
+
+**Only re-fire when:** user explicitly asked for variations with a count, OR previous call returned `failure.retryable === true` (ONE retry), OR previous call returned `completed` but `urls.length === 0` (ONE retry).
+
+## ⚠️ Detecting Failed Generations (CRITICAL)
+
+A generation can fail three ways. Treat ALL as failure:
+
+1. **Tool returns `error`** — explicit. Surface, suggest retry, log `generation_id`.
+2. **Tool returns `completed` but `urls` is empty** — silent failure (NSFW filter, model OOM, upstream 5xx). Tell user "completed without an output — retrying" and re-fire ONCE. Do NOT log to `.kolbo/production.md`. Do NOT claim it worked.
+3. **Tool hangs / never returns** — MCP poll timed out. Call `get_generation_status(generation_id, wait=true)` IMMEDIATELY. The server might be done.
+
+**Always:**
+- Don't celebrate before reading the result. Verify `urls` is non-empty.
+- Don't auto-retry without surfacing the failure. Partial batches: list failed items + reasons + successful count. Never "✅ all done!" on partials.
+- Don't log failed items to `.kolbo/production.md`. Only successes.
+- Surface the user's count. "6 of 8 ready", not "videos ready".
+
+`failure` envelope structure + retry rules: `references/workflows/troubleshooting.md`.
+
+## ⚠️ Generated URLs in Chat (CRITICAL)
+
+Chat renders markdown natively. `![alt](url)` = inline image. `[label](url)` = labeled link with preview.
+
+- **Catalog-style replies** (numbered lists of characters / scenes / products): embed `![alt](url)` so each item shows inline.
+- **Conversational replies** ("4 shots ready"): keep prose short; canvas chip already shows gallery.
+
+Avoid bare URL dumps and HTML `<table>` grids — canvas already provides a gallery.
+
+**After `generate_creative_director` completes** — share results as individual URLs, one per scene. Do NOT create an HTML grid artifact.
+
+**Always** record every URL in `.kolbo/production.md` — see `references/workflows/production-log.md`.
+
+## DTC Ads — Composed Brand Image Workflow
+
+Load this file when the user wants a **DTC ad image** composed from brand identity + ad format + optional avatar/product/reference media. For ad **video** see `workflows/marketing-studio.md`. For brand **product imagery** (Pinterest pin, hero banner, ad pack) see `workflows/product-photoshoot.md`. For marketplace listings see `workflows/marketplace-cards.md`.
+
+### What This Is
 
 A DTC ad is built from **5 composable blocks**:
 
@@ -43,11 +142,11 @@ A DTC ad is built from **5 composable blocks**:
 
 You don't need all 5. The minimum is: a **prompt** + an **ad format**. Everything else is opt-in based on what the user provides.
 
-## End-to-End Flow
+### End-to-End Flow
 
 ```
 1. Pick an ad format     → ask user (labeled options, never auto-pick)
-2. Pick / build brand kit → workflows/research-first.md persists to .kolbo/brand-kits/SLUG.md
+2. Pick / build brand kit → workflows/research-first.md persists to .kolbo/brand-kits/<slug>.md
 3. Attach avatar          → workflows/visual-dna.md ("character" type DNA)
 4. Attach product         → upload_media → reference_images
 5. Attach reference media → upload_media → reference_images (up to ~14 total)
@@ -55,7 +154,7 @@ You don't need all 5. The minimum is: a **prompt** + an **ad format**. Everythin
 7. Deliver                → image URLs + brief one-line summary
 ```
 
-## Ad Format — Always Ask Explicitly
+### Ad Format — Always Ask Explicitly
 
 Picking an ad format is **mandatory and creative** — don't auto-pick from the user's phrasing. The catalogue is small and the choice changes the layout shape dramatically. Always present labeled options:
 
@@ -73,40 +172,40 @@ Picking an ad format is **mandatory and creative** — don't auto-pick from the 
 
 When the user says "make me an ad" without naming a format, offer 3 of these in a labeled question (don't dump all 9). Pick the 3 that best fit the product / brand / phase the user mentioned.
 
-## Brand Kit Reuse
+### Brand Kit Reuse
 
-If `.kolbo/brand-kits/SLUG.md` exists for the brand (see the brand-research routine (WebFetch the brand URL → extract palette + fonts + hero images → re-host via `upload_media` → persist to `.kolbo/brand-kits/SLUG.md`)), **Read it first** and pull `primary_color`, `accent_color`, `text_color`, `bg_color`, `fonts`, `tone`, `target_user`, `logo_url`. Bake these into the prompt:
+If `.kolbo/brand-kits/<slug>.md` exists for the brand (see `workflows/research-first.md`), **Read it first** and pull `primary_color`, `accent_color`, `text_color`, `bg_color`, `fonts`, `tone`, `target_user`, `logo_url`. Bake these into the prompt:
 
 - Exact hex codes for every color (`#FF4D2E` not "orange")
 - Named fonts (`Inter Bold for headline, Inter Regular for body`)
 - Tone descriptors from `### Voice & Audience`
 - Logo as `reference_images[0]` with `@image1` reference in the prompt ("place logo from `@image1` top-left at 8% width, no recolor")
 
-If no brand kit exists and the user gives a brand URL, run the brand-research routine (WebFetch the brand URL → extract palette + fonts + hero images → re-host via `upload_media` → persist to `.kolbo/brand-kits/SLUG.md`) to build one. Then come back here.
+If no brand kit exists and the user gives a brand URL, run `workflows/research-first.md` to build one. Then come back here.
 
-## Avatar Workflow
+### Avatar Workflow
 
 For ads featuring a specific presenter (founder, recurring model, character):
 
 1. **Check if a Visual DNA exists** — `list_visual_dnas`. Match by name or recent use.
 2. **If yes** — pass `visual_dna_ids: ["<id>"]` and reference as `@<dna-name>` in the prompt.
-3. **If no** and the user wants a specific person — create one per the `kolbo-visual-dna` skill (always generate 2 reference images first; lock single-token lowercase name).
+3. **If no** and the user wants a specific person — create one per `workflows/visual-dna.md` (always generate 2 reference images first; lock single-token lowercase name).
 4. **If no** and the brief doesn't need a specific face — skip the avatar entirely; the model will synthesize a plausible presenter.
 
-## Product Workflow
+### Product Workflow
 
 For ads featuring a specific product:
 
 | User provides | Do |
 |---|---|
 | **Product photo** (local file or URL) | `upload_media({ source })` → tag as `@image1` in prompt → log to `.kolbo/production.md` under `### Products` |
-| **Product URL only** (no photo) | Run the brand-research routine (WebFetch the brand URL → extract palette + fonts + hero images → re-host via `upload_media` → persist to `.kolbo/brand-kits/SLUG.md`) first to scrape hero images + brand palette; re-host via `upload_media` → use Kolbo CDN URL |
-| **Multiple angles** | Upload all in parallel (one `upload_media` call each) → pass all in `reference_images` → tag `@image1`, `@image2`, … per the `kolbo-visual-dna` skill reference-tagging rules |
+| **Product URL only** (no photo) | Run `workflows/research-first.md` first to scrape hero images + brand palette; re-host via `upload_media` → use Kolbo CDN URL |
+| **Multiple angles** | Upload all in parallel (one `upload_media` call each) → pass all in `reference_images` → tag `@image1`, `@image2`, … per `workflows/visual-dna.md` reference-tagging rules |
 | **Nothing — text only** | Ask once: "Do you have a product photo? It dramatically improves fidelity." If they say no, proceed text-only but warn quality may be lower |
 
 **Always log products in `.kolbo/production.md`** so subsequent ads in the same workspace reuse the same CDN URL without re-uploading.
 
-## Reference Media Cap
+### Reference Media Cap
 
 Up to **~14 reference images per call**. Higher = the model gets confused about which reference plays which role. Use **`@image1` / `@image2` / …** tags to bind each reference to a role:
 
@@ -116,9 +215,9 @@ shot in the style of @image2 (lifestyle reference).
 Match the palette from the brand kit (#FF4D2E primary, #1A1A1A text).
 ```
 
-See the `kolbo-visual-dna` skill for the full tagging system.
+See `workflows/visual-dna.md` for the full tagging system.
 
-## Generate
+### Generate
 
 **Pick the right Kolbo MCP tool based on output count:**
 
@@ -126,7 +225,7 @@ See the `kolbo-visual-dna` skill for the full tagging system.
 - **Multi-variant set** (3–8 variants of the same ad concept with different palettes / angles / hooks) → `generate_creative_director` with `scene_count`. The director plans each variant's prompt internally.
 - **Identical prompt, just different seeds** (rare for ads — usually you want varied direction) → `generate_image` with `num_images: 1–4`.
 
-## Output Settings — Always Confirm
+### Output Settings — Always Confirm
 
 These materially change output and cost. Ask once, labeled options, before firing:
 
@@ -138,18 +237,18 @@ These materially change output and cost. Ask once, labeled options, before firin
 
 Default-to-cheapest when the user hasn't expressed a quality intent and the difference is ≤ 2× cost.
 
-## Failure Handling
+### Failure Handling
 
 - **Content-policy refusal** → don't retry the same prompt. Suggest less-explicit phrasing or a different product framing.
 - **Brand asset not loading** (logo URL 404, hex code typo) → fix the brand kit file, then retry.
 - **Watermarks / extra text appearing uninvited** → add explicit prompt constraints: "NO captions, NO subtitles, NO watermarks, NO extra text beyond what's specified." This is the most common DTC ad failure mode — models love to invent copy.
 - **Generic 5xx / rate-limit** → retry ONCE with the same payload after a short pause. See SKILL.md "Detecting failed generations".
 
-## UX Rules
+### UX Rules
 
 1. **Always pick an ad format explicitly** with the user — never auto-pick.
 2. **Always confirm aspect ratio + resolution + quantity** before firing.
-3. **Always check for a brand kit** before scraping fresh — `Read .kolbo/brand-kits/SLUG.md` first.
+3. **Always check for a brand kit** before scraping fresh — `Read .kolbo/brand-kits/<slug>.md` first.
 4. **Always log products + brand kits in `.kolbo/production.md`** so future ads reuse instead of re-uploading / re-scraping.
 5. **No auto-retry on failure** — surface the reason and let the user adjust.
 6. **Strict NO uninvited additions** in every ad prompt: "NO captions, NO subtitles, NO watermarks, NO extra text beyond what's specified."

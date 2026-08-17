@@ -24,7 +24,7 @@ Load this file when the user wants a **GPT Image 2 / gpt-image-2** image (OpenAI
 - **People, pose, action**: describe scale, body framing, gaze, object interactions ("full body visible, feet included", "looking down at the open book, not at the camera", "hands naturally gripping the handlebar").
 - **Constraints — what changes vs what stays**: state exclusions and invariants explicitly. For edits use **"change only X" + "keep everything else the same"**, and re-state the preserve list on every iteration to prevent drift. Common invariants: identity, geometry, layout, brand elements, camera angle, saturation, contrast, labels, surrounding objects. Always include "no watermark, no extra text, no logos/trademarks" unless the brief specifies otherwise.
 - **Text in images**: put literal text in **quotes** or **ALL CAPS**, specify typography (font style, size, color, placement). For tricky words / brand names, spell letter-by-letter. Recommend quality **high** when text is small, dense, or multi-font.
-- **Multi-image inputs**: reference each input by number with a short description ("Image 1: product photo… Image 2: style reference…") and describe the interaction ("apply Image 2's style to Image 1", "place the dog from Image 2 next to the woman in Image 1"). Use `@image1` / `@image2` tags — see the `kolbo-visual-dna` skill.
+- **Multi-image inputs**: reference each input by number with a short description ("Image 1: product photo… Image 2: style reference…") and describe the interaction ("apply Image 2's style to Image 1", "place the dog from Image 2 next to the woman in Image 1"). Use `@image1` / `@image2` tags — see `workflows/visual-dna.md`.
 - **Iterate, don't overload**: prefer a clean base prompt + single-change follow-ups ("make lighting warmer", "remove the extra tree", "restore the original background") over one giant prompt.
 
 ## Latency vs Fidelity (recommend `quality` param)
@@ -96,7 +96,7 @@ For edits, the prompt should be tight and constraint-heavy. Call `generate_image
 - "Replace ONLY <object> with <new object>. Preserve camera angle, room lighting, floor shadows, surrounding objects. Photorealistic contact shadows and fabric texture."
 
 ### Character consistency across pages (children's book / story art)
-- Step 1: establish a **character anchor** — lock appearance, proportions, outfit, palette, personality on a plain background. Better yet: create a Visual DNA (see the `kolbo-visual-dna` skill).
+- Step 1: establish a **character anchor** — lock appearance, proportions, outfit, palette, personality on a plain background. Better yet: create a Visual DNA (see `workflows/visual-dna.md`).
 - Step 2+: feed the anchor (or DNA via `visual_dna_ids`) as input. "Continue the story using `@<dna-name>`. Do not redesign. Same <outfit/features/palette>. New scene: <X>."
 
 ## Output Discipline
