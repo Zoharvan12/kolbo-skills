@@ -1,5 +1,5 @@
 ---
-version: 0.8.4
+version: 0.9.0
 name: kolbo-transcription
 description: |
   Transcribe audio/video into text + SRT subtitles + word-by-word SRT, and route
