@@ -1,5 +1,5 @@
 ---
-version: 0.8.4
+version: 0.9.0
 name: kolbo-generate
 description: |
   Generate any image / video / music / TTS / sound / 3D content via the Kolbo AI
@@ -136,14 +136,14 @@ Avoid bare URL dumps and HTML `<table>` grids — canvas already provides a gall
 | `generate_image` | Single image from a text prompt. Supports Visual DNA, moodboards, image presets, reference images, web-search grounding. When a preset is requested, resolve it with `list_presets({ type: "image" })` and pass its exact id as `preset_id`. |
 | `generate_image_edit` | Edit/transform an existing image. Pass `source_images` + edit prompt. Image-editing presets are supported through `preset_id` from `list_presets({ type: "image_edit" })`. |
 | `generate_creative_director` | **2–8 related images or videos as one coherent set.** Use INSTEAD of multiple `generate_image` calls for any related multi-output. |
-| `generate_video` | Text-to-video. Does **not** support Visual DNA — use `generate_elements` for character-consistent video. |
+| `generate_video` | Text-to-video. Accepts `visual_dna_ids` and `sound_enabled`; `generate_elements` is still the primary reference-driven route for a DNA-anchored film. |
 | `generate_video_from_image` | Animate a still. Prompt describes motion, not subject. |
 | `generate_video_from_video` | Restyle/transform an existing video. Keeps original motion. |
 | `generate_elements` | Reference-driven video. **Primary route for DNA → video.** Prompt = Seedance Locked Intro (`Total` + `[GLOBAL LOOK]` / `[CAST]` / `[LOCATION]` + `SHOT N`). Every DNA in `visual_dna_ids` must also be `@Name` in that prompt. |
 | `generate_first_last_frame` | Keyframe interpolation between two frames. |
-| `generate_lipsync` | Lipsync audio to an image or video face. |
+| `generate_lipsync` | Lipsync an existing waveform onto a face. **Not the route for dialogue in a film you are generating** — write the line in the Seedance prompt instead. |
 | `generate_music` | Music generation (Suno + variants). |
-| `generate_speech` | TTS. Use `list_voices` to pick a voice. |
+| `generate_speech` | TTS for narration, voiceover and standalone audio. **NOT for scene dialogue** — Seedance 2/2.5 performs quoted lines itself. |
 | `generate_sound` | Sound effects. |
 | `generate_3d` | 3D models from text / single image / multi-view. Returns GLB/FBX/OBJ/USDZ. |
 | `separate_audio_stems` | Split a soundtrack into Dialogue / Music / Effects / without-dialogue (M&E). The route for removing or isolating speech, instrumental beds, and stems for dubbing. 5cr, inline. See `workflows/audio-stems.md`. |
@@ -177,6 +177,8 @@ Avoid bare URL dumps and HTML `<table>` grids — canvas already provides a gall
 `generate_elements`, Seedance 2, and Seedance 2.5 share **one** compile shape — the Locked Intro in `references/models/seedance.md`:
 
 `Total: Xs / N shots / AR` → `[GLOBAL LOOK – LOCKED, APPLIES TO EVERY SHOT]` → `[CAST – IDENTICAL IN EVERY SHOT]` (each person is `@DNAName`) → `[LOCATION]` → `SHOT N — 0:00–0:02 — …`
+
+Write the beats at FULL DEPTH. The cap is 15,000 characters on Seedance 2.5 (10,000 on 2.0) — a 30s / 8+ shot compile should land around 4k–9k, and every beat carries its own camera move, a performance task for the speaker AND the listeners, prop/hand state, and the sound in that beat. A one-line shot beat is under-written; the structure alone is not the craft. Read `references/models/seedance25.md` before compiling.
 
 Do **not** default Elements to `SCENE CONTEXT` / `OPTICS` / `ACTION` / `ACTIVE REFERENCES` department packs (those live in filmmaking audit/contracts for other models). Do not load `seedance-2-prompting` SCENE CONTEXT as the Elements format.
 
