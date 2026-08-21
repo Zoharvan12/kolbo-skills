@@ -1,5 +1,5 @@
 ---
-version: 0.9.3
+version: 0.9.6
 name: kolbo-marketplace-cards
 description: |
   Generate marketplace listing visuals for Amazon / Shopify / eBay / Etsy /
@@ -166,9 +166,9 @@ A generation can fail three ways. Treat ALL as failure:
 Chat renders markdown natively. `![alt](url)` = inline image. `[label](url)` = labeled link with preview.
 
 - **Catalog-style replies** (numbered lists of characters / scenes / products): embed `![alt](url)` so each item shows inline.
-- **Conversational replies** ("4 shots ready"): keep prose short; canvas chip already shows gallery.
+- **Conversational replies** ("4 shots ready"): keep prose short; Library already shows the gallery.
 
-Avoid bare URL dumps and HTML `<table>` grids — canvas already provides a gallery.
+Avoid bare URL dumps and HTML `<table>` grids — Library already provides a gallery.
 
 **After `generate_creative_director` completes** — share results as individual URLs, one per scene. Do NOT create an HTML grid artifact.
 
