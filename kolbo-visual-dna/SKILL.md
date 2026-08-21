@@ -1,5 +1,5 @@
 ---
-version: 0.9.3
+version: 0.9.6
 name: kolbo-visual-dna
 description: |
   Train a Visual DNA — a personalized model that captures the visual identity
@@ -167,9 +167,9 @@ A generation can fail three ways. Treat ALL as failure:
 Chat renders markdown natively. `![alt](url)` = inline image. `[label](url)` = labeled link with preview.
 
 - **Catalog-style replies** (numbered lists of characters / scenes / products): embed `![alt](url)` so each item shows inline.
-- **Conversational replies** ("4 shots ready"): keep prose short; canvas chip already shows gallery.
+- **Conversational replies** ("4 shots ready"): keep prose short; Library already shows the gallery.
 
-Avoid bare URL dumps and HTML `<table>` grids — canvas already provides a gallery.
+Avoid bare URL dumps and HTML `<table>` grids — Library already provides a gallery.
 
 **After `generate_creative_director` completes** — share results as individual URLs, one per scene. Do NOT create an HTML grid artifact.
 
@@ -240,11 +240,12 @@ When the user says "use the model אסתר" but you've only created a DNA for "�
 
 ### ⚠️ Don't re-fetch / re-list your own outputs (CRITICAL)
 
-After a generation tool returns its URLs, those URLs are **already** in the canvas (the desktop app's gallery panel) and in `.kolbo/production.md`. Do **NOT** call `list_media`, `get_media`, `get_media_stats`, `list_visual_dnas`, or `chat_send_message` with `media_urls` on those URLs just to "verify" or "fetch thumbnails of the results":
+After a generation tool returns its URLs, those URLs are **already** in **Library** (right panel — This session) and in `.kolbo/production.md`. Do **NOT** call `list_media`, `get_media`, `get_media_stats`, `list_visual_dnas`, or `chat_send_message` with `media_urls` on those URLs just to "verify" or "fetch thumbnails of the results":
 
 - It burns credits and time for zero new information.
-- Every such tool call streams partial output into the session, which forces the desktop canvas to re-evaluate (visible flicker on the gallery tiles).
+- Every such tool call streams partial output into the session, which forces Library to re-evaluate (visible flicker on the gallery tiles).
 - The thumbnails returned by `list_media` / `get_media` are the SAME asset you just generated.
+- A black chat generation card while `Generating` is normal — do not treat it as missing output.
 
 **Only call list/get media tools when:**
 - The user explicitly asks ("what do I have in my library?", "show me my old DNAs").
