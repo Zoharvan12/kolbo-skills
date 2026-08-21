@@ -1,5 +1,5 @@
 ---
-version: 0.9.0
+version: 0.9.3
 name: kolbo-music
 description: |
   Generate music via Kolbo — primarily Suno + variants. Full songs, lyrics,
@@ -88,6 +88,8 @@ Passing `visual_dna_ids` is **not enough**. For every DNA in that array you MUST
 Before `generate_elements` / any DNA video: for each id in `visual_dna_ids`, confirm the prompt string includes `@` + that DNA's stored `name`. Missing even one → fix the prompt, do not fire.
 
 Resolve names with `list_visual_dnas` first. Full binding rules: `references/workflows/visual-dna.md`.
+
+**Every still on a DNA can reach the model.** Kolbo now sends all of a DNA's reference images that fit the model's image-slot cap (user uploads first, then one still per DNA, then leftovers round-robin). If a DNA only gets one leftover slot and has no real character sheet, unused stills become a white grid. Mixed-vibe stills or environment photos that contain a main character will confuse the generation — keep each DNA surgically clean. Create-and-pack rules: `references/workflows/visual-dna.md`.
 
 ## 📁 Projects — Where Work Lands (CRITICAL)
 
