@@ -58,6 +58,24 @@ Then generate **only** with the confirmed parameters. If the user changes an opt
 
 For multi-scene / batch work this pairs with `generate_creative_director` (see below) — still confirm the brief first.
 
+## ⚠️ Load the matching skill BEFORE generating (HARD RULE)
+
+Do **not** call `generate_*` / `generate_elements` / `generate_image_edit` until you have loaded the matching skill **in this turn** (the `skill` tool for bundled skills, and/or Read of the `references/` file). "I already know this" is not a load. Users will never invoke these skills themselves.
+
+| About to call / user intent | `skill` tool | Also Read |
+|---|---|---|
+| `generate_elements` **or** any video with Visual DNA **or** Seedance 2 / 2.5 / WAN / MiniMax H3 / Gemini video | `elements-prompting` | `references/models/seedance.md` (+ `seedance25.md` if 2.5) and `references/workflows/visual-dna.md` when DNA is in play |
+| `generate_image` / `generate_image_edit` | `image-prompting-guide` | `references/models/gpt-image.md` / `nano-banana.md` / `prompt-copilot.md` as the model requires. Complex stills / identity lock: `references/workflows/prompt-structure.md` |
+| `generate_video*` that is **not** Elements/DNA (Kling, Veo, Sora, Grok, Hailuo, generic t2v/i2v) | `video-prompting-guide` | matching `references/models/*.md` |
+| `generate_music` | `music-prompting` | `references/models/music.md` |
+| UGC / phone-shot / selfie / "authentic" / must-not-look-like-an-ad | — | `references/workflows/ugc-smartphone.md` |
+| Marketing / TV spot / branded video / unboxing / product review | — | `references/workflows/marketing-studio.md` |
+| DTC ad image | — | `references/workflows/dtc-ads.md` |
+| Product photoshoot / hero / lifestyle / try-on | — | `references/workflows/product-photoshoot.md` |
+| Thumbnail / cover | — | `references/workflows/thumbnails.md` |
+| Marketplace listing cards | — | `references/workflows/marketplace-cards.md` |
+| Film / episode / connected scene | — | `references/workflows/filmmaking.md` + `production-planning.md` |
+
 ## ⚠️ Visual DNA `@Name` in the prompt (HARD RULE — always on)
 
 Passing `visual_dna_ids` is **not enough**. For every DNA in that array you MUST also write `@ExactStoredName` in the prompt text (the `name` from `list_visual_dnas` / `create_visual_dna`). The engine binds identity by parsing `@tags`. No `@tag` → the DNA is wasted.
@@ -66,6 +84,10 @@ Passing `visual_dna_ids` is **not enough**. For every DNA in that array you MUST
 - Wrong: `Zohar's`, `Zohar`, `the left man`, `the man on the LEFT`, `Visual DNA anchors: the man on the LEFT…` — none of these bind
 - Never invent a role label or possessive as a substitute for `@Name`
 - Same rule for moodboards: `#ExactBoardName`
+
+**Rewrite / compile never drops a tag.** If the user, a prior prompt, or `list_visual_dnas` already has `@gal_suit` / `@yonatan` / `#Board`, the Locked Intro you write MUST still contain those exact tokens in CAST **and** in every shot they appear in. Do not "clean" them into first names, `@Image 1 (Lee)`, "the singer", or a SCENE CONTEXT / ACTIVE REFERENCES block with no `@`. A compile that loses a tag is a failed turn — put the tags back before calling `generate_*`.
+
+Before `generate_elements` / any DNA video: for each id in `visual_dna_ids`, confirm the prompt string includes `@` + that DNA's stored `name`. Missing even one → fix the prompt, do not fire.
 
 Resolve names with `list_visual_dnas` first. Full binding rules: `references/workflows/visual-dna.md`.
 
@@ -76,6 +98,28 @@ Everything in Kolbo — sessions, generations, media, docs — lives inside a PR
 1. **User names a project** ("in my Acme project", "for the film") → call `list_projects` ONCE to resolve the name to an ObjectId, then pass that **same** id as `project_id` on **EVERY** subsequent `generate_*` / `upload_media` / `create_doc` / `chat_send_message` call in **this conversation**. There is no server-side sticky store — omitting it on any later call silently lands in the default "API Generations" bucket (`is_default: true`). Once resolved, treat that id as required for the rest of the conversation. Accounts often hold hundreds of projects, so pass `list_projects({ search: "acme" })` rather than listing everything; the list is paginated (50/page) and hides archived projects unless you pass `include_archived: true`.
 2. **No project mentioned** → omit `project_id`; the default bucket is correct. Don't ask unless intent is ambiguous. If `list_sessions` already returned a `project_id` for the work you are continuing, keep passing that id.
 3. **Work landed in the wrong project? MOVE it, never regenerate**: `move_session` relocates a whole session + all its media (works for any session type — the `session_id` from generation responses, chats, transcriptions); `move_media` / `bulk_move_media` / `move_folder_contents` relocate individual media items. Empty leftover sessions after a move: `delete_session` (soft-delete; `restore_session` undoes it). `rename_session` only changes the sidebar title.
+
+## ⚠️ One session per plan bucket (HARD RULE)
+
+Omitting `session_id` on a generate call creates a **new** Kolbo sidebar session. Do that only when the **plan** starts a new bucket — not per take, not per shot, not because you just called a tool.
+
+Name buckets from the plan you already showed the user, then `rename_session` on first create:
+
+| Bucket | What lives in it | Kind |
+|---|---|---|
+| `Cast` | every character sheet / character DNA | image |
+| `Locations` | every environment | image |
+| `Props` | hero products / vehicles (if any) | image |
+| `Scene NN — <slug>` | that scene's video shots **and** retakes | video |
+
+How to thread:
+
+1. First generate of a bucket → omit `session_id`, read it from the result, immediately `rename_session` to the plan name (`Cast`, `Locations`, `Scene 03 — rooftop chase`).
+2. Every later generate in that bucket (more characters, another environment, shot 2, "make it darker", redo take 3) → pass that **same** `session_id`.
+3. New scene or new concept → new session. Same scene / same cast pass → never a new session.
+4. Image tools and video tools cannot share an id (server kinds differ). Cast/Locations stay image; scene clips stay video.
+
+Write each session's `session_id` + plan name into `.kolbo/production.md` `### Sessions`. Do **not** mark the phase Approved or jump to the next bucket until the user confirms (or you asked a labeled GATE and they answered). Full rules: `references/workflows/production-planning.md` + `production-log.md`.
 
 ## Cost Awareness — Quick Rules
 
@@ -127,7 +171,7 @@ Avoid bare URL dumps and HTML `<table>` grids — canvas already provides a gall
 
 **After `generate_creative_director` completes** — share results as individual URLs, one per scene. Do NOT create an HTML grid artifact.
 
-**Always** record every URL in `.kolbo/production.md` — see `references/workflows/production-log.md`.
+**Always** park every successful URL + `session_id` in `.kolbo/production.md` as a **candidate**. Promote to Approved and advance the plan only after the user confirms — see `references/workflows/production-log.md`.
 
 ## Visual DNA — Character / Style Consistency
 
@@ -139,7 +183,7 @@ Visual DNA profiles capture the visual "identity" of a character, style, product
 
 ### Workflow
 
-1. **Create** a profile with `create_visual_dna` — provide reference images (max 4 — if the user gives more, pick the 4 most representative or ask which to keep; never pass 5+), optionally video and audio.
+1. **Sheet first, then DNA.** For any production asset (character / location / prop), resolve the sheet **preset** (`list_presets` with `search`) and `generate_image` with that `preset_id` — custom instructions live on the preset. Then `create_visual_dna` with the sheet as `character_sheet_url` (max 4 extra images — if the user gives more, pick the 4 most representative; never pass 5+). Optionally video and audio.
 2. **Types**: `character` (default), `style`, `product`, `scene`, `environment`.
 3. **Use** the profile by passing its `id` in `visual_dna_ids` in: `generate_image`, `generate_creative_director`, `generate_elements`, `generate_video_from_image`, `generate_video_from_video`, `generate_first_last_frame`.
 4. **List/inspect** profiles with `list_visual_dnas` / `get_visual_dna`.
@@ -216,6 +260,7 @@ Whenever a generation call passes `visual_dna_ids` (even just one), the prompt M
 - Write a "Visual DNA anchors:" prose block that describes position/wardrobe but never writes `@ExactName`.
 - Write the character's name in plain text without the `@` prefix.
 - Drop the `@name` when only one DNA is passed — the engine still needs the binding so it knows the DNA is the *subject* and not a passive style.
+- **Drop or "clean" tags while rewriting a prompt** (help-widget parity). Compiling SCENE CONTEXT / Locked Intro / a "better" English prompt is not permission to delete `@gal_suit` or rewrite `@yonatan` as `Yonatan`. Copy every existing `@` / `#` token into the new prompt, then add craft around them.
 
 **Wrong** (DNA `name` is `esther_model`, user wrote prompt in Hebrew):
 ```
@@ -374,12 +419,22 @@ Tools: `list_visual_dna_folders`, `create_visual_dna_folder` (`name`, optional h
 - **Creating many characters for one production?** Create the folder FIRST, then `move_visual_dna_to_folder` each DNA right after `create_visual_dna` — don't leave a big cast unsorted at root.
 - To list a folder's contents: `list_visual_dnas` and filter by each profile's `folder_id` (there is no server-side folder filter).
 
-### Character sheet — offer it for character DNAs
+### Character sheet — default for production assets (not a catalog preset)
 
-`generate_character_sheet` builds a multi-angle turnaround from reference image URLs — the strongest consistency booster for a character DNA. It CHARGES CREDITS, so:
-- When the user is about to create a **character** DNA, proactively OFFER it: "want me to generate a character sheet first? It makes the character far more consistent and costs a few credits." Run it only on a yes.
-- Flow: `generate_character_sheet {image_urls}` → show the sheet → `create_visual_dna {name, images, character_sheet_url: <url>}`.
-- For non-character DNAs (style/product/environment), skip it.
+Custom instructions live on the **image preset**. Resolve it silently, then generate:
+
+1. `list_presets({ type: "image", search: "headless" | "bible" | "character sheet" | "location" | "product" })`
+2. Pass the exact `id` as `preset_id` on `generate_image` (2K or 4K, never 1K; 4K for bible / high-detail / when named)
+3. Show the sheet → GATE → `create_visual_dna { name, images, character_sheet_url }`
+
+| Search | When |
+|---|---|
+| `bible` | Lead or anyone with a lot of detail (wardrobe, hair, accessories, instrument) |
+| `headless` | Face already locked, or clothing / instrument / body must stay independent of the face |
+| `character sheet` | Simple supporting person |
+| `location` / `product` | Matching DNA type |
+
+Do **not** omit `search` (that dumps the catalog). Do not show the preset picker. `generate_character_sheet` is fallback only if no preset matches.
 
 #### ⚠️ Aspect ratio — character sheets and bibles are LANDSCAPE
 
