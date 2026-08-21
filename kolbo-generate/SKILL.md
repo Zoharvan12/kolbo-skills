@@ -57,6 +57,24 @@ Then generate **only** with the confirmed parameters. If the user changes an opt
 
 For multi-scene / batch work this pairs with `generate_creative_director` (see below) — still confirm the brief first.
 
+## ⚠️ Load the matching skill BEFORE generating (HARD RULE)
+
+Do **not** call `generate_*` / `generate_elements` / `generate_image_edit` until you have loaded the matching skill **in this turn** (the `skill` tool for bundled skills, and/or Read of the `references/` file). "I already know this" is not a load. Users will never invoke these skills themselves.
+
+| About to call / user intent | `skill` tool | Also Read |
+|---|---|---|
+| `generate_elements` **or** any video with Visual DNA **or** Seedance 2 / 2.5 / WAN / MiniMax H3 / Gemini video | `elements-prompting` | `references/models/seedance.md` (+ `seedance25.md` if 2.5) and `references/workflows/visual-dna.md` when DNA is in play |
+| `generate_image` / `generate_image_edit` | `image-prompting-guide` | `references/models/gpt-image.md` / `nano-banana.md` / `prompt-copilot.md` as the model requires. Complex stills / identity lock: `references/workflows/prompt-structure.md` |
+| `generate_video*` that is **not** Elements/DNA (Kling, Veo, Sora, Grok, Hailuo, generic t2v/i2v) | `video-prompting-guide` | matching `references/models/*.md` |
+| `generate_music` | `music-prompting` | `references/models/music.md` |
+| UGC / phone-shot / selfie / "authentic" / must-not-look-like-an-ad | — | `references/workflows/ugc-smartphone.md` |
+| Marketing / TV spot / branded video / unboxing / product review | — | `references/workflows/marketing-studio.md` |
+| DTC ad image | — | `references/workflows/dtc-ads.md` |
+| Product photoshoot / hero / lifestyle / try-on | — | `references/workflows/product-photoshoot.md` |
+| Thumbnail / cover | — | `references/workflows/thumbnails.md` |
+| Marketplace listing cards | — | `references/workflows/marketplace-cards.md` |
+| Film / episode / connected scene | — | `references/workflows/filmmaking.md` + `production-planning.md` |
+
 ## ⚠️ Visual DNA `@Name` in the prompt (HARD RULE — always on)
 
 Passing `visual_dna_ids` is **not enough**. For every DNA in that array you MUST also write `@ExactStoredName` in the prompt text (the `name` from `list_visual_dnas` / `create_visual_dna`). The engine binds identity by parsing `@tags`. No `@tag` → the DNA is wasted.
@@ -65,6 +83,10 @@ Passing `visual_dna_ids` is **not enough**. For every DNA in that array you MUST
 - Wrong: `Zohar's`, `Zohar`, `the left man`, `the man on the LEFT`, `Visual DNA anchors: the man on the LEFT…` — none of these bind
 - Never invent a role label or possessive as a substitute for `@Name`
 - Same rule for moodboards: `#ExactBoardName`
+
+**Rewrite / compile never drops a tag.** If the user, a prior prompt, or `list_visual_dnas` already has `@gal_suit` / `@yonatan` / `#Board`, the Locked Intro you write MUST still contain those exact tokens in CAST **and** in every shot they appear in. Do not "clean" them into first names, `@Image 1 (Lee)`, "the singer", or a SCENE CONTEXT / ACTIVE REFERENCES block with no `@`. A compile that loses a tag is a failed turn — put the tags back before calling `generate_*`.
+
+Before `generate_elements` / any DNA video: for each id in `visual_dna_ids`, confirm the prompt string includes `@` + that DNA's stored `name`. Missing even one → fix the prompt, do not fire.
 
 Resolve names with `list_visual_dnas` first. Full binding rules: `references/workflows/visual-dna.md`.
 
@@ -75,6 +97,28 @@ Everything in Kolbo — sessions, generations, media, docs — lives inside a PR
 1. **User names a project** ("in my Acme project", "for the film") → call `list_projects` ONCE to resolve the name to an ObjectId, then pass that **same** id as `project_id` on **EVERY** subsequent `generate_*` / `upload_media` / `create_doc` / `chat_send_message` call in **this conversation**. There is no server-side sticky store — omitting it on any later call silently lands in the default "API Generations" bucket (`is_default: true`). Once resolved, treat that id as required for the rest of the conversation. Accounts often hold hundreds of projects, so pass `list_projects({ search: "acme" })` rather than listing everything; the list is paginated (50/page) and hides archived projects unless you pass `include_archived: true`.
 2. **No project mentioned** → omit `project_id`; the default bucket is correct. Don't ask unless intent is ambiguous. If `list_sessions` already returned a `project_id` for the work you are continuing, keep passing that id.
 3. **Work landed in the wrong project? MOVE it, never regenerate**: `move_session` relocates a whole session + all its media (works for any session type — the `session_id` from generation responses, chats, transcriptions); `move_media` / `bulk_move_media` / `move_folder_contents` relocate individual media items. Empty leftover sessions after a move: `delete_session` (soft-delete; `restore_session` undoes it). `rename_session` only changes the sidebar title.
+
+## ⚠️ One session per plan bucket (HARD RULE)
+
+Omitting `session_id` on a generate call creates a **new** Kolbo sidebar session. Do that only when the **plan** starts a new bucket — not per take, not per shot, not because you just called a tool.
+
+Name buckets from the plan you already showed the user, then `rename_session` on first create:
+
+| Bucket | What lives in it | Kind |
+|---|---|---|
+| `Cast` | every character sheet / character DNA | image |
+| `Locations` | every environment | image |
+| `Props` | hero products / vehicles (if any) | image |
+| `Scene NN — <slug>` | that scene's video shots **and** retakes | video |
+
+How to thread:
+
+1. First generate of a bucket → omit `session_id`, read it from the result, immediately `rename_session` to the plan name (`Cast`, `Locations`, `Scene 03 — rooftop chase`).
+2. Every later generate in that bucket (more characters, another environment, shot 2, "make it darker", redo take 3) → pass that **same** `session_id`.
+3. New scene or new concept → new session. Same scene / same cast pass → never a new session.
+4. Image tools and video tools cannot share an id (server kinds differ). Cast/Locations stay image; scene clips stay video.
+
+Write each session's `session_id` + plan name into `.kolbo/production.md` `### Sessions`. Do **not** mark the phase Approved or jump to the next bucket until the user confirms (or you asked a labeled GATE and they answered). Full rules: `references/workflows/production-planning.md` + `production-log.md`.
 
 ## Cost Awareness — Quick Rules
 
@@ -126,14 +170,14 @@ Avoid bare URL dumps and HTML `<table>` grids — canvas already provides a gall
 
 **After `generate_creative_director` completes** — share results as individual URLs, one per scene. Do NOT create an HTML grid artifact.
 
-**Always** record every URL in `.kolbo/production.md` — see `references/workflows/production-log.md`.
+**Always** park every successful URL + `session_id` in `.kolbo/production.md` as a **candidate**. Promote to Approved and advance the plan only after the user confirms — see `references/workflows/production-log.md`.
 
 ## Available MCP Tools
 
 ### Generation
 | Tool | Description |
 |------|-------------|
-| `generate_image` | Single image from a text prompt. Supports Visual DNA, moodboards, image presets, reference images, web-search grounding. When a preset is requested, resolve it with `list_presets({ type: "image" })` and pass its exact id as `preset_id`. |
+| `generate_image` | Single image from a text prompt. Supports Visual DNA, moodboards, image presets (custom instructions live here), reference images, web-search grounding. Named sheets/styles: `list_presets({ type: "image", search: "headless" })` then `preset_id`. |
 | `generate_image_edit` | Edit/transform an existing image. Pass `source_images` + edit prompt. Image-editing presets are supported through `preset_id` from `list_presets({ type: "image_edit" })`. |
 | `generate_creative_director` | **2–8 related images or videos as one coherent set.** Use INSTEAD of multiple `generate_image` calls for any related multi-output. |
 | `generate_video` | Text-to-video. Accepts `visual_dna_ids` and `sound_enabled`; `generate_elements` is still the primary reference-driven route for a DNA-anchored film. |
@@ -156,7 +200,7 @@ Avoid bare URL dumps and HTML `<table>` grids — canvas already provides a gall
 | `list_models` / `list_voices` / `check_credits` / `get_generation_status` / `cancel_generation` / `get_session_usage` | Discovery + status. `list_models` with no args returns the recommended shortlist out of ~428 — pass `type` for a full category with per-model caps. `cancel_generation` stops an in-flight job and refunds what it can: use it when the user changes their mind mid-generation instead of letting it run. |
 | `upload_media` / `create_upload_ticket` / `list_media` / `get_media` / `get_media_stats` / `favorite_media` / `unfavorite_media` / `delete_media` / `restore_media` / `permanently_delete_media` / `move_media` / `bulk_*_media` / `*_media_folder` | Media library — see `workflows/media-library.md`. Getting a LOCAL file in depends on where the server runs: `upload_media` with a path only works on a local (stdio) install; over a remote connector use `create_upload_ticket` and POST the file yourself. |
 | `create_visual_dna` / `generate_character_sheet` / `list_visual_dnas` / `get_visual_dna` / `delete_visual_dna` / `*_visual_dna_folder` (5 folder tools) | Visual DNA (+ character sheet, character folders) — see `workflows/visual-dna.md` |
-| `list_moodboards` / `get_moodboard` / `list_presets` | Style overlays. A preset request is binding: resolve the requested or closest matching preset in the correct catalog, then pass its exact returned `id` as `preset_id`. Never say a preset was used if the generation call omitted it. |
+| `list_moodboards` / `get_moodboard` / `list_presets` | Style overlays + sheet presets. Always pass `search` when you know the name — that is a silent id lookup, not a catalog to show. Never omit `preset_id` after claiming a preset was used. |
 | `list_color_palettes` / `analyze_color_palette` / `create_color_palette` / `update_color_palette` / `delete_color_palette` / `activate_color_palette` / `deactivate_color_palette` | **Color DNA — sticky and account-wide.** At most one palette is active at a time; while it is, it strict-grades **every** image and video generation automatically, with no per-call argument. `analyze_color_palette` pulls colors out of 1-5 image URLs for free and does NOT save. `create_color_palette` defaults `is_active: true`, which activates it and deactivates any other. Per-generation opt-out: `skip_color_palette: true` on `generate_image` / `generate_image_edit` / `generate_video` / `generate_video_from_image`. |
 | `list_agents` / `create_agent` / `update_agent` / `delete_agent` | Custom chat agents — reusable named personas for `chat_send_message`. The agent's `description` IS the system instruction. Resolve a name the user mentions ("use my SEO agent") to an id with `list_agents`, then pass `agent_id`. Global/preset agents are read-only; only the user's own can be updated or deleted. |
 | `search_stock_media` / `get_stock_sources` / `get_stock_categories` / `get_stock_collections` / `get_stock_asset` / `analyze_script_for_stock` / `import_stock_asset` | Stock library (free, no credits) — EXISTING photos / videos / 3D / SFX / music. For stock **music** use `search_stock_media` with `mediaType: "music"` (semantic vibe query, e.g. "uplifting corporate background") → `get_stock_asset` for downloads. The older `*_music_library` tools are deprecated adapters over this — prefer the stock tools, except for the licensed-catalog tools in the next row. |
@@ -174,13 +218,13 @@ Avoid bare URL dumps and HTML `<table>` grids — canvas already provides a gall
 
 ## ⚠️ Seedance / Elements prompt contract (HARD RULE)
 
-`generate_elements`, Seedance 2, and Seedance 2.5 share **one** compile shape — the Locked Intro in `references/models/seedance.md`:
+`generate_elements`, Seedance 2 / 2.5, WAN, MiniMax H3, Gemini, and any Visual DNA video share **one** compile shape — the Locked Intro in `references/models/seedance.md`. Load `elements-prompting` first (craft, `@Image N` mapping, eight elements), then compile:
 
 `Total: Xs / N shots / AR` → `[GLOBAL LOOK – LOCKED, APPLIES TO EVERY SHOT]` → `[CAST – IDENTICAL IN EVERY SHOT]` (each person is `@DNAName`) → `[LOCATION]` → `SHOT N — 0:00–0:02 — …`
 
 Write the beats at FULL DEPTH. The cap is 15,000 characters on Seedance 2.5 (10,000 on 2.0) — a 30s / 8+ shot compile should land around 4k–9k, and every beat carries its own camera move, a performance task for the speaker AND the listeners, prop/hand state, and the sound in that beat. A one-line shot beat is under-written; the structure alone is not the craft. Read `references/models/seedance25.md` before compiling.
 
-Do **not** default Elements to `SCENE CONTEXT` / `OPTICS` / `ACTION` / `ACTIVE REFERENCES` department packs (those live in filmmaking audit/contracts for other models). Do not load `seedance-2-prompting` SCENE CONTEXT as the Elements format.
+Do **not** default Elements to `SCENE CONTEXT` / `OPTICS` / `ACTION` / `ACTIVE REFERENCES` department packs (those live in filmmaking audit/contracts for other models). `elements-prompting` is the craft skill (formerly `seedance-2-prompting`); Locked Intro is the compile shape.
 
 ## ⚠️ If the User Names a Tool, USE THAT TOOL (HARD RULE)
 
@@ -211,19 +255,24 @@ A user-named tool — in any language — overrides every other rule. Recognized
 
 ## Core Workflow
 
-**Preset contract:** if the user asks for a preset, names one, or says to use one of their/Kolbo presets, call `list_presets` with the matching type before generation and pass the selected exact `id` as `preset_id`. Use `image` for `generate_image` and `image_edit` for `generate_image_edit`. Never invent an id or silently continue without the requested preset.
+**Preset contract:**
+- Custom instructions live on the **preset**. Prefer `generate_image` + `preset_id` (not `generate_character_sheet`) for Character Sheet / Headless / Bible / location / product sheets.
+- Always `list_presets({ type: "image", search: "<name>" })` — `headless`, `bible`, `character sheet`. That is a silent id lookup. Do **not** omit `search` (that dumps the whole catalog). Reuse the id after the first hit.
+- Browse (no search) only when the user asked to see presets.
+- Pass the exact returned `id` as `preset_id`. Never invent an id.
 
 1. **Check credits** ONCE per conversation (Step 0). Skip if already checked.
-2. **Discover models** with `list_models` using a `type` filter — but **skip when the user names a specific model** (this turn **or** earlier in the conversation / compaction `## Locked choices`).
-3. **Pick the model**:
+2. **Load the matching skill** (HARD RULE above) — `skill` tool + Read the `references/` file. Do this before the first paid call in the turn.
+3. **Discover models** with `list_models` using a `type` filter — but **skip when the user names a specific model** (this turn **or** earlier in the conversation / compaction `## Locked choices`).
+4. **Pick the model**:
    - User named one → that name is a **family lock**, not a single catalog row. Use it. Identifiers resolve leniently — `"z-image"` / `"nano banana 2"` / `"grok imagine"` auto-resolve, including to the sibling for the tool you are calling (`grok-imagine-text-to-video` on `generate_video_from_image` becomes `grok-imagine-image-to-video`). `list_models` is still authoritative for constraints, caps, and pricing — not for swapping brands.
    - **Never cheapest-swap a named family.** After compaction, "animate those images" is still Grok if the user said Grok. Seedance / Kling / Veo are not a "best balance" substitute. If the named family has no variant for this modality, ASK — do not silently switch.
    - Auto-select → **only when no model was named on this task**. Then pick from "Auto-selectable" (models with a `summary`). Cheapest fit. Prefer `[RECOMMENDED]` when cost is similar.
    - Never auto-select from "Named-only" section.
-4. **Validate inputs** against model caps — see `references/workflows/cost-and-validation.md`.
-5. **How calls work**: each tool blocks until generation is fully complete. Images: seconds. Video: minutes. Multiple tool calls in one response run concurrently. On hosts with live widgets the tool instead returns `submitted` instantly — the card updates on its own; you only need `get_generation_status` when a follow-up step needs the output URLs.
-6. **Checking status — NEVER poll in a loop**: `get_generation_status` takes `wait=true` (blocks server-side until done, ~3 min) and `generation_ids` (check MANY generations in ONE call — returns `all_done` + which are still running). One `wait=true` call replaces any polling loop. If it comes back with some still processing, call it ONCE more with `wait=true` and the remaining ids.
-7. **Share the URL** after success. Never fabricate URLs.
+5. **Validate inputs** against model caps — see `references/workflows/cost-and-validation.md`.
+6. **How calls work**: each tool blocks until generation is fully complete. Images: seconds. Video: minutes. Multiple tool calls in one response run concurrently. On hosts with live widgets the tool instead returns `submitted` instantly — the card updates on its own; you only need `get_generation_status` when a follow-up step needs the output URLs.
+7. **Checking status — NEVER poll in a loop**: `get_generation_status` takes `wait=true` (blocks server-side until done, ~3 min) and `generation_ids` (check MANY generations in ONE call — returns `all_done` + which are still running). One `wait=true` call replaces any polling loop. If it comes back with some still processing, call it ONCE more with `wait=true` and the remaining ids.
+8. **Share the URL** after success. Never fabricate URLs.
 
 Model types for `list_models`: `text_to_img`, `image_editing`, `text_to_video`, `img_to_video`, `draw_to_video`, `video_to_video`, `elements`, `firstlastgenerations`, `lipsync-image`, `lipsync-video`, `music_gen`, `text_to_speech`, `text_to_sound`, `stt`, `text`, `3d_text_to_model`, `3d_image_to_model`, `3d_multi_image_to_model`, `3d_world`.
 
@@ -234,7 +283,7 @@ Model types for `list_models`: `text_to_img`, `image_editing`, `text_to_video`, 
 - **Tracking a batch**: check ALL in-flight ids in ONE `get_generation_status` call with `generation_ids` + `wait=true`. Read `all_done` / `still_processing` from the response — do not check ids one by one, and never re-call without `wait`.
 - **Batch ≤10 items**: output ALL tool calls in one response — they run concurrently.
 - **Bulk >10 items**: real-world ceilings — `generate_image` 8–10 in-flight, image-edit 5–8, video tools 3–5, `generate_video_from_video` 3, music/speech/sound 5–8. Fire one batch → wait → fire next. Persist every `generation_id` in `.kolbo/production.md`.
-- **`upload_media` external URLs first.** `files`/`source_images`/`image_url` only accept Kolbo-hosted URLs reliably; external URLs cause `400`.
+- **`upload_media` external (non-Kolbo) URLs only.** `files`/`source_images`/`image_url` reject unknown hosts with `400`. A `media.kolbo.ai` / generate_* URL is already hosted — pass it through. Never `upload_media` a Kolbo URL.
 
 ## ⚠️ Editing an Existing Video → ONE Call, Not Frames-First (CRITICAL)
 
