@@ -10,9 +10,18 @@ AI agent skills for **image / video / music / 3D / branded ads / product photogr
 
 ## Install
 
-Pick one. Each method handles the [`@kolbo/mcp`](https://www.npmjs.com/package/@kolbo/mcp) server setup and the API-key prompt as part of skill setup.
+### Upload one zip — Claude.ai, ChatGPT, Codex
 
-### Claude Code marketplace — recommended
+Download [`kolbo.zip`](./kolbo.zip) and upload it. That is the whole skill (routing + model rules + filmmaking references) in the folder layout Claude and Codex expect.
+
+1. Connect Kolbo MCP first: Settings → Connectors → add `https://api.kolbo.ai/mcp` → log in → Allow.
+2. Upload the zip:
+   - **Claude.ai** — Settings → Features → Skills → Upload skill → `kolbo.zip`
+   - **ChatGPT / Codex** — Settings → Skills → Upload → `kolbo.zip` (or unzip into `~/.codex/skills/` for Codex CLI)
+
+The zip is `kolbo/SKILL.md` at the root of the archive — do not re-zip the files inside it.
+
+### Claude Code marketplace — recommended for terminals
 
 Inside Claude Code:
 

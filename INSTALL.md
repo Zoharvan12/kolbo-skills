@@ -20,7 +20,17 @@ They chain via return values (no implicit state): `kolbo-visual-dna` returns `vd
 
 A Kolbo account. Create one at [app.kolbo.ai](https://app.kolbo.ai). Free tier works for testing; some video / 3D / virality models require Basic+.
 
-The skills drive the `@kolbo/mcp` server, which is auto-installed via `npx -y @kolbo/mcp` by every install method below — you don't install it separately.
+The skills drive the `@kolbo/mcp` server, which is auto-installed via `npx -y @kolbo/mcp` by every install method below — you don't install it separately. **Exception:** the zip-upload path uses the remote connector instead of npx.
+
+## Option 0 — Upload `kolbo.zip` (Claude.ai, ChatGPT, Codex)
+
+The file: [`kolbo.zip`](./kolbo.zip).
+
+1. Add the Kolbo connector: Settings → Connectors → `https://api.kolbo.ai/mcp` → Connect → log in → Allow.
+2. Upload the zip:
+   - **Claude.ai** — Settings → Features → Skills → Upload skill
+   - **ChatGPT / Codex** — Settings → Skills → Upload
+   - **Codex CLI** — `mkdir -p ~/.codex/skills && tar -xf kolbo.zip -C ~/.codex/skills`
 
 ## Option 1 — Claude Code marketplace (recommended for Claude Code users)
 
