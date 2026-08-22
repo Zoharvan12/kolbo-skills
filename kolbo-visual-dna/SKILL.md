@@ -1,5 +1,5 @@
 ---
-version: 0.9.6
+version: 0.9.7
 name: kolbo-visual-dna
 description: |
   Train a Visual DNA — a personalized model that captures the visual identity
@@ -35,26 +35,33 @@ Once per conversation, before any other Kolbo tool call:
 
 1. **Run `check_credits`.** If it fails with "Session expired" / "Not authenticated", ask the user to run `kolbo auth login` (or their branded CLI command like `sapir auth login`) and reload the editor.
 2. **If `list_models` returns empty**, MCP isn't wired — same fix.
-3. Use the balance ONLY for the low-balance check at this moment. **Never quote a "credits remaining" number later in the session** — coding/chat usage also deducts credits, so any remembered or computed balance is stale. Report only what each generation cost (`credits_used`); if the user asks what's left, run `check_credits` fresh right then.
+3. Use the balance ONLY for the low-balance check at this moment (see the "credits remaining" rule in the brief section below).
 
 If the user is on a whitelabel build (`sapir`, etc.), they must use their branded command — not `kolbo`. See `references/workflows/troubleshooting.md`.
 
-## 🎬 Confirm the Creative Brief BEFORE Generating (CRITICAL — read first)
+## 🎬 Confirm the Creative Brief & Cost BEFORE Generating (CRITICAL — read first)
 
 Never fire a paid generation the moment the user says "make X". First **present the brief back as a confirmation the user can change** — this is the single most important interaction. It gives the user control over what gets created and what it costs, instead of silently spending credits on defaults.
 
 **Before ANY paid image / video / music / speech / 3D generation**, unless the user has *explicitly* dictated every key parameter in this message, ask ONE labeled question (the UI renders it as an options card) confirming:
 
-- **Model** — your recommended pick as the default option, plus 1–2 alternatives (with their credit cost).
+- **Model** — your recommended pick as the default option, plus 1–2 alternatives (with their credit cost). Suggest a cheaper alternative if one fits.
 - **Aspect ratio** — e.g. `1:1 / 9:16 / 16:9` (offer the sensible default first).
 - **Count** — how many (1 / 4 / …).
 - **Resolution / quality / duration** — where the model supports it.
 - **Creative direction** — style / mood / scene, when the user was vague ("4 cats" → offer style options: photoreal / illustrated / cinematic / surprise-me).
 - **Credit cost** — state the total (`✦ N credits`) right in the question so cost is never a surprise.
 
-Then generate **only** with the confirmed parameters. If the user changes an option, use the change. This mirrors the approval-card flow: propose → let them adjust → confirm → generate.
+Then generate **only** with the confirmed parameters. If the user changes an option, use the change. This mirrors the approval-card flow: propose → let them adjust → confirm → generate. Never fire on defaults the user didn't choose.
 
-**Only skip the brief confirmation when** the user's message already pins model + aspect + count + creative direction (e.g. "generate 4 photoreal tabby cats, 1:1, z-image/turbo") — then just state the cost one-liner and fire. A low credit cost is **not** a reason to skip: cheap ≠ no-confirmation. What matters is whether the user actually chose the parameters.
+**Only skip the brief/cost confirmation when** the user's message already pins model + aspect + count + creative direction (e.g. "generate 4 photoreal tabby cats, 1:1, z-image/turbo") — then just state the cost one-liner and fire. A low credit cost is **not** a reason to skip: cheap ≠ no-confirmation. What matters is whether the user actually chose the parameters.
+
+**Cost rules** (full tables + formulas in `references/workflows/cost-and-validation.md`):
+
+- **Video/lipsync `credit` is per-SECOND, not per-clip**: `total = credit × duration`. This is the universal rule for video/firstlast/elements/motion_graphic/cast types, not a per-model exception — `list_models` states it inline now. The one carve-out is a model with `flat_credit_by_resolution` set.
+- **Batch totalling 100+ credits**: run `check_credits` first.
+- **Quote real cost**: after firing, log `credits_used` (from the tool result) to `.kolbo/production.md` — never `base × count`.
+- **Never state "credits remaining" from arithmetic** (opening balance − generation costs). Coding/chat usage deducts credits too, so the math is always wrong. Report cost only; if the user asks for their balance, call `check_credits` fresh at that moment.
 
 For multi-scene / batch work this pairs with `generate_creative_director` (see below) — still confirm the brief first.
 
@@ -97,7 +104,7 @@ Resolve names with `list_visual_dnas` first. Full binding rules: `references/wor
 
 Everything in Kolbo — sessions, generations, media, docs — lives inside a PROJECT. Getting this wrong is the #1 user complaint ("my work went to the wrong project").
 
-1. **User names a project** ("in my Acme project", "for the film") → call `list_projects` ONCE to resolve the name to an ObjectId, then pass that **same** id as `project_id` on **EVERY** subsequent `generate_*` / `upload_media` / `create_doc` / `chat_send_message` call in **this conversation**. There is no server-side sticky store — omitting it on any later call silently lands in the default "API Generations" bucket (`is_default: true`). Once resolved, treat that id as required for the rest of the conversation. Accounts often hold hundreds of projects, so pass `list_projects({ search: "acme" })` rather than listing everything; the list is paginated (50/page) and hides archived projects unless you pass `include_archived: true`.
+1. **User names a project** ("in my Acme project", "for the film") → call `list_projects` ONCE to resolve the name to an ObjectId, then pass that **same** id as `project_id` on **EVERY** subsequent `generate_*` / `upload_media` / `create_doc` / `chat_send_message` call in **this conversation**. There is no server-side sticky store — omitting it on any later call silently lands in the default "API Generations" bucket (`is_default: true`). Once resolved, treat that id as required for the rest of the conversation. Accounts often hold hundreds of projects, so pass `list_projects({ search: "acme" })` rather than listing everything; the list is paginated (50/page) and hides archived projects unless you pass `include_archived: true`. When the user starts new work, `create_project` first, then pass its id the same way.
 2. **No project mentioned** → omit `project_id`; the default bucket is correct. Don't ask unless intent is ambiguous. If `list_sessions` already returned a `project_id` for the work you are continuing, keep passing that id.
 3. **Work landed in the wrong project? MOVE it, never regenerate**: `move_session` relocates a whole session + all its media (works for any session type — the `session_id` from generation responses, chats, transcriptions); `move_media` / `bulk_move_media` / `move_folder_contents` relocate individual media items. Empty leftover sessions after a move: `delete_session` (soft-delete; `restore_session` undoes it). `rename_session` only changes the sidebar title.
 
@@ -123,22 +130,26 @@ How to thread:
 
 Write each session's `session_id` + plan name into `.kolbo/production.md` `### Sessions`. Do **not** mark the phase Approved or jump to the next bucket until the user confirms (or you asked a labeled GATE and they answered). Full rules: `references/workflows/production-planning.md` + `production-log.md`.
 
-## Cost Awareness — Quick Rules
+## ⚠️ Generation lifecycle — source of truth, waiting, failures (HARD RULE — read this)
 
-Full tables + formulas in `references/workflows/cost-and-validation.md`. Quick rules:
+**How calls work:** each generation tool blocks until the job is fully complete. Images: seconds. Video: minutes. Multiple tool calls in one response run concurrently. On hosts with live widgets the tool instead returns `submitted` (or `_timed_out`) instantly — the card updates on its own.
 
-- **Skip the brief/cost confirmation ONLY** when the user's message already pins model + count + aspect + creative direction (see "Confirm the Creative Brief" above). Low cost alone is **not** a reason to skip — cheap generations still get the one labeled confirmation unless the user chose the parameters.
-- **Otherwise confirm** via the labeled-question card: the parameters + the credit cost, suggest a cheaper alternative if one fits, wait for the user's pick. Never fire on defaults the user didn't choose.
-- **Batch totalling 100+ credits**: run `check_credits` first.
-- **Quote real cost**: after firing, log `credits_used` (from the tool result) to `.kolbo/production.md` — never `base × count`.
-- **Video/lipsync `credit` is per-SECOND, not per-clip**: `total = credit × duration`. This is the universal rule for video/firstlast/elements/motion_graphic/cast types, not a per-model exception — `list_models` states it inline now. The one carve-out is a model with `flat_credit_by_resolution` set.
-- **Never state "credits remaining" from arithmetic** (opening balance − generation costs). Coding/chat usage deducts credits too, so the math is always wrong. Report cost only; if the user asks for their balance, call `check_credits` fresh at that moment.
+Four surfaces show the same job. Use this map — never invent a fifth:
 
-## 🛑 Runaway-Loop Guard — ONE Generation per Requested Item (CRITICAL)
+| Surface | What it is | Trust it for |
+|---|---|---|
+| **Library** (right panel — "This session" / "All media") | User-facing gallery of **completed** media | "Is the user's output there?" Point humans here — never to chat history. Finished clips/images land automatically — do **not** call `list_media` / `get_media` / `list_session_generations` to "check if it worked" after a generate you already submitted (burns credits/context, can pollute the session). A K/logo spinner tile **is** the in-progress placeholder for the same job, not a missing one. |
+| **Chat generation card** | Progress chrome while a job is in flight | Status badge only (`Generating` / done). A **black / empty preview while Generating is NORMAL** — the iframe has nothing to paint yet. It is **not** failure, not "lost", not a reason to re-fire. |
+| **`get_generation_status`** (MCP) | Agent API for job state | Whether the server job is `completed` / `failed` / still running, and the final `urls`. This is your SoT for in-flight work — **not** the card pixels. |
+| **`.kolbo/production.md`** | Your private log across turns | Ids + URLs after success. Compaction-safe memory — not the user gallery. |
 
-When the user asks for **one specific change**, the answer is **a single tool call**. After URLs return, **stop**. Surface and wait.
+**🛑 NEVER re-fire a generation you already called.** Aborted / timed-out / `submitted` calls still process server-side. Finish with `get_generation_status` (`wait=true`) — never a second `generate_*`.
 
-You are NOT allowed to:
+**🛑 After `submitted` / `_timed_out` — END THE TURN (credit guard).** Do **not** keep thinking, writing skills, editing files, or planning "next steps" while a generation is still running — that burns the user's coding/chat credits for nothing. Either **stop immediately** after telling the user it's generating in Library / the card above (preferred when you do not need the output URLs yet), OR — if the **next** required step needs those URLs — call `get_generation_status` **once** with `wait=true` as the **only** follow-up, no parallel Write/Edit/Think while it waits.
+
+**Checking status — NEVER poll in a loop.** `get_generation_status` takes `wait=true` (blocks server-side until done, ~3 min) and `generation_ids` (check MANY generations in ONE call — returns `all_done` + which are still running). One `wait=true` call replaces any polling loop: check ALL in-flight ids in ONE call, never one by one, never without `wait`. If it comes back with some still processing, call it ONCE more with `wait=true` and the remaining ids.
+
+**🛑 Runaway-loop guard — ONE generation per requested item.** When the user asks for **one specific change**, the answer is **a single tool call**. After URLs return, **stop**. Surface and wait. You are NOT allowed to:
 - Fire the same tool 3+ times in a single turn unless the user explicitly asked for "N variations".
 - Re-fire because you think the result might not be exactly what the user wanted.
 - Auto-retry on success.
@@ -146,19 +157,17 @@ You are NOT allowed to:
 
 **Only re-fire when:** user explicitly asked for variations with a count, OR previous call returned `failure.retryable === true` (ONE retry), OR previous call returned `completed` but `urls.length === 0` (ONE retry).
 
-## ⚠️ Detecting Failed Generations (CRITICAL)
-
-A generation can fail three ways. Treat ALL as failure:
+**Detecting failure — a generation can fail three ways. Treat ALL as failure:**
 
 1. **Tool returns `error`** — explicit. Surface, suggest retry, log `generation_id`.
-2. **Tool returns `completed` but `urls` is empty** — silent failure (NSFW filter, model OOM, upstream 5xx). Tell user "completed without an output — retrying" and re-fire ONCE. Do NOT log to `.kolbo/production.md`. Do NOT claim it worked.
+2. **Tool returns `completed` but `urls` is empty** — silent failure (NSFW filter, model OOM, upstream 5xx). Tell user "completed without an output — retrying" and re-fire ONCE. Do NOT claim it worked.
 3. **Tool hangs / never returns** — MCP poll timed out. Call `get_generation_status(generation_id, wait=true)` IMMEDIATELY. The server might be done.
 
-**Always:**
+**Reporting:**
 - Don't celebrate before reading the result. Verify `urls` is non-empty.
-- Don't auto-retry without surfacing the failure. Partial batches: list failed items + reasons + successful count. Never "✅ all done!" on partials.
-- Don't log failed items to `.kolbo/production.md`. Only successes.
-- Surface the user's count. "6 of 8 ready", not "videos ready".
+- Don't auto-retry without surfacing the failure. Partial batches: list failed items + reasons + successful count, and surface the user's count — "6 of 8 ready", not "videos ready". Never "✅ all done!" on partials.
+- Log only successes to `.kolbo/production.md` — never failed items.
+- When done: say the result is in **Library → This session**. "Where is it?" → Library (This session). "Is it done?" with no urls yet → `get_generation_status` once.
 
 `failure` envelope structure + retry rules: `references/workflows/troubleshooting.md`.
 
@@ -185,7 +194,7 @@ Visual DNA profiles capture the visual "identity" of a character, style, product
 
 ### Workflow
 
-1. **Sheet first, then DNA.** For any production asset (character / location / prop), resolve the sheet **preset** (`list_presets` with `search`) and `generate_image` with that `preset_id` — custom instructions live on the preset. Then `create_visual_dna` with the sheet as `character_sheet_url` (max 4 extra images — if the user gives more, pick the 4 most representative **that share the same identity and vibe**; never pass 5+). Optionally video and audio. See **Purity** above before you generate those stills.
+1. **Sheet first, then DNA.** For any production asset (character / location / prop), resolve the sheet **preset** (`list_presets` with `search`) and `generate_image` with that `preset_id` — custom instructions live on the preset. Then `create_visual_dna` with the sheet as `character_sheet_url` (max 4 extra images — if the user gives more, pick the 4 most representative **that share the same identity and vibe**; never pass 5+). Optionally video and audio. See **Purity** below before you generate those stills.
 2. **Types**: `character` (default), `style`, `product`, `scene`, `environment`.
 3. **Use** the profile by passing its `id` in `visual_dna_ids` in: `generate_image`, `generate_creative_director`, `generate_elements`, `generate_video_from_image`, `generate_video_from_video`, `generate_first_last_frame`.
 4. **List/inspect** profiles with `list_visual_dnas` / `get_visual_dna`.
@@ -199,7 +208,7 @@ Visual DNA profiles capture the visual "identity" of a character, style, product
 Kolbo no longer sends only the first still or the character sheet. For every attached DNA:
 
 1. **User-uploaded refs take image slots first.**
-2. **Remaining slots:** one main still per DNA, then leftover stills from each DNA **round-robin** until the model's image-slot cap (`elementsMaxImages` / equivalent) is full.
+2. **Remaining slots:** one main still per DNA, then leftover stills from each DNA **round-robin** until the model's image-slot cap (`elements_max_images` / equivalent) is full.
 3. **If every still fits the cap, every still is sent** as its own reference. A 4-image character DNA on a 9-slot model is four slots, not one.
 4. **If a DNA only gets one leftover slot**, has **no distinct character sheet**, and still has unused stills, those leftovers are composited into a **white grid / collage** (up to 9 cells) so the model still sees them. A real character sheet is never overwritten by a collage.
 5. **Native Kling Elements** stays one element per DNA (sheet / frontal). Other providers use the slot pack above.
@@ -281,16 +290,7 @@ Fields to read for the image source (use the first one present on the item): `th
 
 ### ⚠️ @name Syntax — ALWAYS use it when passing visual_dna_ids (MANDATORY)
 
-Whenever a generation call passes `visual_dna_ids` (even just one), the prompt MUST refer to each Visual DNA by `@<exact-name>` — the literal `name` field as it was set in `create_visual_dna` and as it appears in `list_visual_dnas`. This is how the engine binds the DNA to a role in the scene. Without `@name`, the engine guesses, drops the DNA, or blends multiple DNAs together.
-
-**Use the actual stored name, programmatically.** When you call `list_visual_dnas` (or `create_visual_dna`), read the `name` field off the response and use that exact string after the `@`. Do NOT:
-
-- Translate the name into another language ("אסתר" / "esther" / "אסתי" — pick whichever string is in `name` and use ONLY that one).
-- Invent a friendlier alias ("the model", "המודל", "her", "Zohar's", "the left man", "the man on the LEFT").
-- Write a "Visual DNA anchors:" prose block that describes position/wardrobe but never writes `@ExactName`.
-- Write the character's name in plain text without the `@` prefix.
-- Drop the `@name` when only one DNA is passed — the engine still needs the binding so it knows the DNA is the *subject* and not a passive style.
-- **Drop or "clean" tags while rewriting a prompt** (help-widget parity). Compiling SCENE CONTEXT / Locked Intro / a "better" English prompt is not permission to delete `@gal_suit` or rewrite `@yonatan` as `Yonatan`. Copy every existing `@` / `#` token into the new prompt, then add craft around them.
+SKILL.md's `@Name` hard rule applies; here is why it binds that way:
 
 **Wrong** (DNA `name` is `esther_model`, user wrote prompt in Hebrew):
 ```
@@ -405,31 +405,11 @@ You can combine all three reference types in a single call — they're additive,
 
 ### Visual DNA Limits
 
-Read `max_visual_dna` from `list_models` for the exact cap, AND `supports_visual_dna` for the on/off boolean. A model can support DNA without an explicit cap, or have a non-null cap but silently ignore DNA on certain paths (e.g. `generate_video`). Typical ranges: image models (non-Kling) up to **8**, Kling image models **3**, Elements video models **3–5**, everything else up to **3**.
+Read `max_visual_dna` (and `elements_max_images` for image-slot packing) from `list_models` for the chosen model, AND `supports_visual_dna` for the on/off boolean. A model can support DNA without an explicit cap, or have a non-null cap but silently ignore DNA on certain paths (e.g. `generate_video`). Typical ranges: image models (non-Kling) up to **8**, Kling image models **3**, Elements video models **3–5**, everything else up to **3**.
 
 ### ⚠️ Visual DNA Creation — Always Generate Reference Images First (MANDATORY)
 
-**Before calling `create_visual_dna` for a character**, always generate 2 reference images first and include them alongside any user-provided images. These give the Visual DNA engine multi-angle coverage and dramatically improve consistency.
-
-**Step 1 — Generate both images in parallel (one `generate_image` call each, fire simultaneously):**
-
-1. **4-angle character sheet** — prompt: `"[character description], character reference sheet showing front view, back view, left side view, right side view, four panels arranged in a 2x2 grid, neutral solid background, full body, photorealistic"`, aspect ratio `16:9` (or `3:2` — always landscape, see the aspect-ratio rule below)
-2. **Close-up portrait** — prompt: `"[character description], close-up portrait, face and shoulders, neutral solid background, soft studio lighting, photorealistic"`, aspect ratio `1:1`
-
-**Step 2 — Call `create_visual_dna`** with:
-- `images`: the 4-angle sheet URL first, then the close-up URL — **plus** the user's reference photo(s) only if they provided one (i.e. a real person or existing character they want to match). If they gave no reference image, the 2 generated images alone are sufficient.
-- `type`: `"character"`
-- `name`: single-token lowercase descriptive name (see naming rule above)
-
-**Why:** A single reference photo only shows one angle. The close-up gives the engine facial detail; the 4-angle sheet gives it body geometry and pose range. Together they produce far more consistent generations. Both stills (and any user photos you add) must be the **same person, same vibe** — they will all be packed into the next generation.
-
-**Skip this only if** the user explicitly says "just use my image as-is" or provides 3+ reference images already covering multiple angles.
-
-#### Environments, products, style — same precision
-
-- **Environment / location:** generate empty (or crowd-only) plates. Prompt out heroes and readable faces. A location DNA that contains `@maya` in the frame will put Maya in every later shot of that place.
-- **Product:** isolated angles, consistent lighting, readable label. No extra hero unless the product is worn and the body is generic.
-- **Style:** one look, applied cleanly. Do not mix neon-cyber and dusty-western stills on the same style DNA.
+**Before calling `create_visual_dna` for a character**, generate the reference stills first — a multi-angle sheet plus a close-up gives the engine far better coverage than a single photo. Route the stills through the **preset contract** (`list_presets` search → `preset_id` on `generate_image`), never a raw hand-written sheet prompt — see "Character sheet — default for production assets" below for the full flow, preset search terms, and aspect-ratio rules. Include the user's reference photo(s) alongside only if they provided one. **Skip this only if** the user explicitly says "just use my image as-is" or provides 3+ reference images already covering multiple angles.
 
 ### When to Use
 
