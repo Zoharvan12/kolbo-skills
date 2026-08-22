@@ -1,5 +1,5 @@
 ---
-version: 0.9.6
+version: 0.9.7
 name: kolbo-creative-director
 description: |
   Generate 2–8 related image OR video outputs from one brief — storyboards, ad
@@ -34,26 +34,33 @@ Once per conversation, before any other Kolbo tool call:
 
 1. **Run `check_credits`.** If it fails with "Session expired" / "Not authenticated", ask the user to run `kolbo auth login` (or their branded CLI command like `sapir auth login`) and reload the editor.
 2. **If `list_models` returns empty**, MCP isn't wired — same fix.
-3. Use the balance ONLY for the low-balance check at this moment. **Never quote a "credits remaining" number later in the session** — coding/chat usage also deducts credits, so any remembered or computed balance is stale. Report only what each generation cost (`credits_used`); if the user asks what's left, run `check_credits` fresh right then.
+3. Use the balance ONLY for the low-balance check at this moment (see the "credits remaining" rule in the brief section below).
 
 If the user is on a whitelabel build (`sapir`, etc.), they must use their branded command — not `kolbo`. See `references/workflows/troubleshooting.md`.
 
-## 🎬 Confirm the Creative Brief BEFORE Generating (CRITICAL — read first)
+## 🎬 Confirm the Creative Brief & Cost BEFORE Generating (CRITICAL — read first)
 
 Never fire a paid generation the moment the user says "make X". First **present the brief back as a confirmation the user can change** — this is the single most important interaction. It gives the user control over what gets created and what it costs, instead of silently spending credits on defaults.
 
 **Before ANY paid image / video / music / speech / 3D generation**, unless the user has *explicitly* dictated every key parameter in this message, ask ONE labeled question (the UI renders it as an options card) confirming:
 
-- **Model** — your recommended pick as the default option, plus 1–2 alternatives (with their credit cost).
+- **Model** — your recommended pick as the default option, plus 1–2 alternatives (with their credit cost). Suggest a cheaper alternative if one fits.
 - **Aspect ratio** — e.g. `1:1 / 9:16 / 16:9` (offer the sensible default first).
 - **Count** — how many (1 / 4 / …).
 - **Resolution / quality / duration** — where the model supports it.
 - **Creative direction** — style / mood / scene, when the user was vague ("4 cats" → offer style options: photoreal / illustrated / cinematic / surprise-me).
 - **Credit cost** — state the total (`✦ N credits`) right in the question so cost is never a surprise.
 
-Then generate **only** with the confirmed parameters. If the user changes an option, use the change. This mirrors the approval-card flow: propose → let them adjust → confirm → generate.
+Then generate **only** with the confirmed parameters. If the user changes an option, use the change. This mirrors the approval-card flow: propose → let them adjust → confirm → generate. Never fire on defaults the user didn't choose.
 
-**Only skip the brief confirmation when** the user's message already pins model + aspect + count + creative direction (e.g. "generate 4 photoreal tabby cats, 1:1, z-image/turbo") — then just state the cost one-liner and fire. A low credit cost is **not** a reason to skip: cheap ≠ no-confirmation. What matters is whether the user actually chose the parameters.
+**Only skip the brief/cost confirmation when** the user's message already pins model + aspect + count + creative direction (e.g. "generate 4 photoreal tabby cats, 1:1, z-image/turbo") — then just state the cost one-liner and fire. A low credit cost is **not** a reason to skip: cheap ≠ no-confirmation. What matters is whether the user actually chose the parameters.
+
+**Cost rules** (full tables + formulas in `references/workflows/cost-and-validation.md`):
+
+- **Video/lipsync `credit` is per-SECOND, not per-clip**: `total = credit × duration`. This is the universal rule for video/firstlast/elements/motion_graphic/cast types, not a per-model exception — `list_models` states it inline now. The one carve-out is a model with `flat_credit_by_resolution` set.
+- **Batch totalling 100+ credits**: run `check_credits` first.
+- **Quote real cost**: after firing, log `credits_used` (from the tool result) to `.kolbo/production.md` — never `base × count`.
+- **Never state "credits remaining" from arithmetic** (opening balance − generation costs). Coding/chat usage deducts credits too, so the math is always wrong. Report cost only; if the user asks for their balance, call `check_credits` fresh at that moment.
 
 For multi-scene / batch work this pairs with `generate_creative_director` (see below) — still confirm the brief first.
 
@@ -96,7 +103,7 @@ Resolve names with `list_visual_dnas` first. Full binding rules: `references/wor
 
 Everything in Kolbo — sessions, generations, media, docs — lives inside a PROJECT. Getting this wrong is the #1 user complaint ("my work went to the wrong project").
 
-1. **User names a project** ("in my Acme project", "for the film") → call `list_projects` ONCE to resolve the name to an ObjectId, then pass that **same** id as `project_id` on **EVERY** subsequent `generate_*` / `upload_media` / `create_doc` / `chat_send_message` call in **this conversation**. There is no server-side sticky store — omitting it on any later call silently lands in the default "API Generations" bucket (`is_default: true`). Once resolved, treat that id as required for the rest of the conversation. Accounts often hold hundreds of projects, so pass `list_projects({ search: "acme" })` rather than listing everything; the list is paginated (50/page) and hides archived projects unless you pass `include_archived: true`.
+1. **User names a project** ("in my Acme project", "for the film") → call `list_projects` ONCE to resolve the name to an ObjectId, then pass that **same** id as `project_id` on **EVERY** subsequent `generate_*` / `upload_media` / `create_doc` / `chat_send_message` call in **this conversation**. There is no server-side sticky store — omitting it on any later call silently lands in the default "API Generations" bucket (`is_default: true`). Once resolved, treat that id as required for the rest of the conversation. Accounts often hold hundreds of projects, so pass `list_projects({ search: "acme" })` rather than listing everything; the list is paginated (50/page) and hides archived projects unless you pass `include_archived: true`. When the user starts new work, `create_project` first, then pass its id the same way.
 2. **No project mentioned** → omit `project_id`; the default bucket is correct. Don't ask unless intent is ambiguous. If `list_sessions` already returned a `project_id` for the work you are continuing, keep passing that id.
 3. **Work landed in the wrong project? MOVE it, never regenerate**: `move_session` relocates a whole session + all its media (works for any session type — the `session_id` from generation responses, chats, transcriptions); `move_media` / `bulk_move_media` / `move_folder_contents` relocate individual media items. Empty leftover sessions after a move: `delete_session` (soft-delete; `restore_session` undoes it). `rename_session` only changes the sidebar title.
 
@@ -122,22 +129,26 @@ How to thread:
 
 Write each session's `session_id` + plan name into `.kolbo/production.md` `### Sessions`. Do **not** mark the phase Approved or jump to the next bucket until the user confirms (or you asked a labeled GATE and they answered). Full rules: `references/workflows/production-planning.md` + `production-log.md`.
 
-## Cost Awareness — Quick Rules
+## ⚠️ Generation lifecycle — source of truth, waiting, failures (HARD RULE — read this)
 
-Full tables + formulas in `references/workflows/cost-and-validation.md`. Quick rules:
+**How calls work:** each generation tool blocks until the job is fully complete. Images: seconds. Video: minutes. Multiple tool calls in one response run concurrently. On hosts with live widgets the tool instead returns `submitted` (or `_timed_out`) instantly — the card updates on its own.
 
-- **Skip the brief/cost confirmation ONLY** when the user's message already pins model + count + aspect + creative direction (see "Confirm the Creative Brief" above). Low cost alone is **not** a reason to skip — cheap generations still get the one labeled confirmation unless the user chose the parameters.
-- **Otherwise confirm** via the labeled-question card: the parameters + the credit cost, suggest a cheaper alternative if one fits, wait for the user's pick. Never fire on defaults the user didn't choose.
-- **Batch totalling 100+ credits**: run `check_credits` first.
-- **Quote real cost**: after firing, log `credits_used` (from the tool result) to `.kolbo/production.md` — never `base × count`.
-- **Video/lipsync `credit` is per-SECOND, not per-clip**: `total = credit × duration`. This is the universal rule for video/firstlast/elements/motion_graphic/cast types, not a per-model exception — `list_models` states it inline now. The one carve-out is a model with `flat_credit_by_resolution` set.
-- **Never state "credits remaining" from arithmetic** (opening balance − generation costs). Coding/chat usage deducts credits too, so the math is always wrong. Report cost only; if the user asks for their balance, call `check_credits` fresh at that moment.
+Four surfaces show the same job. Use this map — never invent a fifth:
 
-## 🛑 Runaway-Loop Guard — ONE Generation per Requested Item (CRITICAL)
+| Surface | What it is | Trust it for |
+|---|---|---|
+| **Library** (right panel — "This session" / "All media") | User-facing gallery of **completed** media | "Is the user's output there?" Point humans here — never to chat history. Finished clips/images land automatically — do **not** call `list_media` / `get_media` / `list_session_generations` to "check if it worked" after a generate you already submitted (burns credits/context, can pollute the session). A K/logo spinner tile **is** the in-progress placeholder for the same job, not a missing one. |
+| **Chat generation card** | Progress chrome while a job is in flight | Status badge only (`Generating` / done). A **black / empty preview while Generating is NORMAL** — the iframe has nothing to paint yet. It is **not** failure, not "lost", not a reason to re-fire. |
+| **`get_generation_status`** (MCP) | Agent API for job state | Whether the server job is `completed` / `failed` / still running, and the final `urls`. This is your SoT for in-flight work — **not** the card pixels. |
+| **`.kolbo/production.md`** | Your private log across turns | Ids + URLs after success. Compaction-safe memory — not the user gallery. |
 
-When the user asks for **one specific change**, the answer is **a single tool call**. After URLs return, **stop**. Surface and wait.
+**🛑 NEVER re-fire a generation you already called.** Aborted / timed-out / `submitted` calls still process server-side. Finish with `get_generation_status` (`wait=true`) — never a second `generate_*`.
 
-You are NOT allowed to:
+**🛑 After `submitted` / `_timed_out` — END THE TURN (credit guard).** Do **not** keep thinking, writing skills, editing files, or planning "next steps" while a generation is still running — that burns the user's coding/chat credits for nothing. Either **stop immediately** after telling the user it's generating in Library / the card above (preferred when you do not need the output URLs yet), OR — if the **next** required step needs those URLs — call `get_generation_status` **once** with `wait=true` as the **only** follow-up, no parallel Write/Edit/Think while it waits.
+
+**Checking status — NEVER poll in a loop.** `get_generation_status` takes `wait=true` (blocks server-side until done, ~3 min) and `generation_ids` (check MANY generations in ONE call — returns `all_done` + which are still running). One `wait=true` call replaces any polling loop: check ALL in-flight ids in ONE call, never one by one, never without `wait`. If it comes back with some still processing, call it ONCE more with `wait=true` and the remaining ids.
+
+**🛑 Runaway-loop guard — ONE generation per requested item.** When the user asks for **one specific change**, the answer is **a single tool call**. After URLs return, **stop**. Surface and wait. You are NOT allowed to:
 - Fire the same tool 3+ times in a single turn unless the user explicitly asked for "N variations".
 - Re-fire because you think the result might not be exactly what the user wanted.
 - Auto-retry on success.
@@ -145,19 +156,17 @@ You are NOT allowed to:
 
 **Only re-fire when:** user explicitly asked for variations with a count, OR previous call returned `failure.retryable === true` (ONE retry), OR previous call returned `completed` but `urls.length === 0` (ONE retry).
 
-## ⚠️ Detecting Failed Generations (CRITICAL)
-
-A generation can fail three ways. Treat ALL as failure:
+**Detecting failure — a generation can fail three ways. Treat ALL as failure:**
 
 1. **Tool returns `error`** — explicit. Surface, suggest retry, log `generation_id`.
-2. **Tool returns `completed` but `urls` is empty** — silent failure (NSFW filter, model OOM, upstream 5xx). Tell user "completed without an output — retrying" and re-fire ONCE. Do NOT log to `.kolbo/production.md`. Do NOT claim it worked.
+2. **Tool returns `completed` but `urls` is empty** — silent failure (NSFW filter, model OOM, upstream 5xx). Tell user "completed without an output — retrying" and re-fire ONCE. Do NOT claim it worked.
 3. **Tool hangs / never returns** — MCP poll timed out. Call `get_generation_status(generation_id, wait=true)` IMMEDIATELY. The server might be done.
 
-**Always:**
+**Reporting:**
 - Don't celebrate before reading the result. Verify `urls` is non-empty.
-- Don't auto-retry without surfacing the failure. Partial batches: list failed items + reasons + successful count. Never "✅ all done!" on partials.
-- Don't log failed items to `.kolbo/production.md`. Only successes.
-- Surface the user's count. "6 of 8 ready", not "videos ready".
+- Don't auto-retry without surfacing the failure. Partial batches: list failed items + reasons + successful count, and surface the user's count — "6 of 8 ready", not "videos ready". Never "✅ all done!" on partials.
+- Log only successes to `.kolbo/production.md` — never failed items.
+- When done: say the result is in **Library → This session**. "Where is it?" → Library (This session). "Is it done?" with no urls yet → `get_generation_status` once.
 
 `failure` envelope structure + retry rules: `references/workflows/troubleshooting.md`.
 
@@ -194,7 +203,7 @@ A multi-scene batch generator. Submit 1–8 scenes in one go and the tool fans t
 - **Cinema Manual** — per-scene **first frame + last frame** + per-scene prompt. Full cinematic control over composition transitions. Best for: hero shots, controlled camera moves, deliberate edits.
 
 #### Identity & Style Locks
-- **Visual DNA** — attach a character/product preset via `visual_dna_ids` to lock identity across all scenes. Up to **8 Visual DNAs** can be active at once (e.g. main character + product + side character). See `workflows/visual-dna.md` for the `@name` syntax — every DNA must be tagged inside the prompt.
+- **Visual DNA** — attach a character/product preset via `visual_dna_ids` to lock identity across all scenes (e.g. main character + product + side character). The cap is per model — read `max_visual_dna` from `list_models`. See `workflows/visual-dna.md` for the `@name` syntax — every DNA must be tagged inside the prompt.
 - **Moodboard** — attach `moodboard_id` (or `moodboard_ids`) for a curated mood/style reference that anchors the aesthetic of the whole batch.
 - When the user mentions a recurring character/product, **ask** if they want to use a Visual DNA and recommend it. Same for a consistent aesthetic → recommend a Moodboard.
 
@@ -273,13 +282,7 @@ A great batch isn't 8 random shots — it's a sequence with intent. Pick one str
 
 ### Character-Driven Video — Frames First
 
-For any ad / story / scene-based video **created from scratch** featuring a Visual DNA character, do NOT jump straight from DNA to per-shot video. The right flow is:
-
-1. **Generate the shot frames first** as still images via `generate_creative_director` with `scene_count` + `visual_dna_ids` + `workflow_type: "image"`. DNA is strongest in image generation; the user can approve cheaply before any expensive video runs.
-2. **Confirm the frames with the user** if there are more than ~3 shots, or if the user hasn't said "go straight to video."
-3. **Animate each frame** with `generate_video_from_image`, passing each approved frame as `image_url`.
-
-Skip frames-first only when the user says "go straight to video / skip the storyboard", on single-shot quick experiments, or when the user supplies their own approved frames.
+SKILL.md's frames-first rule applies. The Creative Director deltas: generate the frames via `generate_creative_director` with `workflow_type: "image"` (+ `scene_count`, `visual_dna_ids`), then animate each approved frame with `generate_video_from_image`, passing it as `image_url`.
 
 ### UGC sets and thumbnail sets
 
