@@ -1,5 +1,5 @@
 ---
-version: 0.9.7
+version: 0.9.9
 name: kolbo-visual-dna
 description: |
   Train a Visual DNA — a personalized model that captures the visual identity
