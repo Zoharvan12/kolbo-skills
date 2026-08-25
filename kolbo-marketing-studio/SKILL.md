@@ -1,5 +1,5 @@
 ---
-version: 0.9.10
+version: 0.9.11
 name: kolbo-marketing-studio
 description: |
   Generate branded ad VIDEO — UGC, unboxing, tutorial, product review, TV spot,
@@ -62,6 +62,7 @@ Then generate **only** with the confirmed parameters. If the user changes an opt
 - **Batch totalling 100+ credits**: run `check_credits` first.
 - **Quote real cost**: after firing, log `credits_used` (from the tool result) to `.kolbo/production.md` — never `base × count`.
 - **Never state "credits remaining" from arithmetic** (opening balance − generation costs). Coding/chat usage deducts credits too, so the math is always wrong. Report cost only; if the user asks for their balance, call `check_credits` fresh at that moment.
+- **Out of credits → `show_plans`.** A generation refused for credits already returns the upgrade card automatically — do NOT retry it, and do not re-run the tool "to be sure". Call `show_plans` yourself when the user asks about pricing, plans, upgrading, or how to get more credits. Prices are live and promo-adjusted; never quote them from memory. The user completes any purchase themselves on app.kolbo.ai/pricing — you cannot buy for them.
 
 For multi-scene / batch work this pairs with `generate_creative_director` (see below) — still confirm the brief first.
 
