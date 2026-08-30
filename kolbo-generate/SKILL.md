@@ -1,5 +1,5 @@
 ---
-version: 0.9.12
+version: 0.9.13
 name: kolbo-generate
 description: |
   Generate any image / video / music / TTS / sound / 3D content via the Kolbo AI
@@ -223,6 +223,7 @@ Avoid bare URL dumps and HTML `<table>` grids — Library already provides a gal
 | `chat_send_message` / `chat_list_conversations` / `chat_get_messages` | Kolbo chat with optional `media_urls` (up to 10 per call) |
 | `create_review_asset` / `add_review_version` / `set_review_status` / `create_review_comment` / `reply_review_comment` / `resolve_review_comment` / `unresolve_review_comment` / `create_review_collection` / `create_review_share_link` / `revoke_review_share_link` / `get_review_storage_usage` (+ list/get/update/delete siblings) | **Kolbo Review** — Frame.io-style client review: asset = media + appended versions (new cut = `add_review_version`, never delete+recreate), timecoded comments per version, approve/request-changes status, guest share links (no Kolbo account; comment-only unless `canSetStatus`). 5GB review storage cap. See `workflows/review-collections.md`. |
 | `publish_html_artifact` | Publish HTML / SVG / Mermaid to `sites.kolbo.ai`. Server dedupes by content hash. Strict CSP. |
+| `blender_list_sessions` / `blender_get_scene` / `blender_search_docs` / `blender_capture_viewport` / `blender_apply_operations` / `blender_import_media` / `blender_render` / `blender_undo` / `blender_file_operation` / `blender_execute_python` / `blender_get_command_status` | Connected Blender control through the Kolbo extension. Every tool crosses into an external desktop host; read `workflows/blender.md` before the first call. |
 
 ## ⚠️ Seedance / Elements prompt contract (HARD RULE)
 

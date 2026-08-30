@@ -1,6 +1,6 @@
 # AUTO-GENERATED — do not edit
 
-This tree is generated from kolbo-code, the single source of truth (skill v0.9.12).
+This tree is generated from kolbo-code, the single source of truth (skill v0.9.13).
 
 - Canonical body content: `packages/opencode/skills/kolbo/`
 - Routing frontmatter: `packages/opencode/script/split-skills/frontmatter/`
