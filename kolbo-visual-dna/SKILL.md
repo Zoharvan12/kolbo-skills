@@ -93,11 +93,12 @@ Passing `visual_dna_ids` is **not enough**. For every DNA in that array you MUST
 - Right: `visual_dna_ids: ["vdna_…"]` + prompt `@Zohar walks into frame`
 - Wrong: `Zohar's`, `Zohar`, `the left man`, `the man on the LEFT`, `Visual DNA anchors: the man on the LEFT…` — none of these bind
 - Never invent a role label or possessive as a substitute for `@Name`
+- **Asset tags are exempt from every English-only prompt rule.** Copy the actual stored `name` verbatim in its original language, case, spaces, punctuation, and diacritics. Stored `אסתר` → `@אסתר`, `ليلى` → `@ليلى`, `小雨` → `@小雨`; never `@Esther`, `@Layla`, or another translated/transliterated alias. Never slugify or rename an existing DNA to make a prompt English. Preserve these tags through every rewrite and final tool call.
 - Same rule for moodboards: `#ExactBoardName`
 
 **Rewrite / compile never drops a tag.** If the user, a prior prompt, or `list_visual_dnas` already has `@gal_suit` / `@yonatan` / `#Board`, the Locked Intro you write MUST still contain those exact tokens in CAST **and** in every shot they appear in. Do not "clean" them into first names, `@Image 1 (Lee)`, "the singer", or a SCENE CONTEXT / ACTIVE REFERENCES block with no `@`. A compile that loses a tag is a failed turn — put the tags back before calling `generate_*`.
 
-Before `generate_elements` / any DNA video: for each id in `visual_dna_ids`, confirm the prompt string includes `@` + that DNA's stored `name`. Missing even one → fix the prompt, do not fire.
+Before ANY generation call using `visual_dna_ids` (images, edits, Elements, or Creative Director): resolve each id to its stored `name` from the selected asset binding or `list_visual_dnas` / `get_visual_dna`, then confirm the final prompt includes the exact `@` + name. Missing or rewritten even one → fix the prompt, do not fire.
 
 Resolve names with `list_visual_dnas` first. Full binding rules: `references/workflows/visual-dna.md`.
 
@@ -311,18 +312,18 @@ visual_dna_ids: ["vdna_abc",  // dana
 
 The match is **literal and case-insensitive**, so:
 - The `@name` must equal the stored `name` field (e.g. if `name: "esther_model"` → write `@esther_model`, not `@Esther`, not `@אסתר`, not `@the model`).
-- Any-language characters are supported — if the DNA was created with `name: "אסתר"` you write `@אסתר`. Use the EXACT stored string.
+- Any-language characters are supported — if the DNA was created with `name: "אסתר"` you write `@אסתר`. Use the EXACT stored string. Asset tags are identifiers and are exempt from English-only prompt/dialogue rules: never translate, transliterate, lowercase, strip diacritics, replace spaces, or slugify an existing name. Resolve the selected id with `get_visual_dna` if the current name is unknown; never guess from the user's language or a production-log alias.
 - Mentions terminate at punctuation (`.,!?`), double-spaces, another `@`, or end of string. So `@maya, wearing...` matches `maya`.
 
 This composes with `@image1` / `@image2` positional tags for plain reference/source images — see "Reference Tagging" below.
 
 #### ⚠️ Naming rule for `create_visual_dna` — NO SPACES (MANDATORY)
 
-The `name` you set MUST be a **single token, lowercase, no spaces, ASCII-safe** — `esther_model`, `dana`, `tokyo_neon`, `brand_red`. Never `Sarah Johnson`, never `the red dress`.
+For a NEW DNA, prefer a short single token in the user's chosen language, such as `אסתר`, `ليلى`, `小雨`, or `esther_model`. ASCII and lowercase are not required. This naming recommendation never permits rewriting an EXISTING stored name or its prompt tag.
 
 Reason: the prompt parser stops the `@<token>` match at the first space (and at `.,!?` punctuation). So `@Sarah Johnson` matches *only* `Sarah` — if no DNA named `Sarah` exists, the mention is silently dropped and the DNA never binds. A single-token name is the only way to guarantee inline `@name` works in any sentence, in any language, without forcing the user to write awkward punctuation around it.
 
-Use underscores for multi-word concepts (`old_town`, not `Old Town`). When the user proposes a name with spaces, accept the intent but collapse it into a single token before storing (`"Sarah Johnson"` → `sarah_johnson`) and tell them once how you'll refer to it. Source of truth: [kolbo-docs / Visual DNA & @ References](https://docs.kolbo.ai/kolbo-code/visual-dna).
+For new multi-word names, suggest underscores in the same language. Do not silently translate or rename a user-specified name. For existing names, preserve the full stored string and selected id, including spaces; if binding fails, report the limitation instead of inventing an alias or renaming the user's DNA.
 
 ### Reference Tagging — `@image1` / `@video1` / `@Audio1`
 
