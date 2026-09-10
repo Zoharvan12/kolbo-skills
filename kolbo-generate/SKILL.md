@@ -1,5 +1,5 @@
 ---
-version: 0.9.13
+version: 0.9.14
 name: kolbo-generate
 description: |
   Generate any image / video / music / TTS / sound / 3D content via the Kolbo AI
@@ -180,6 +180,10 @@ Avoid bare URL dumps and HTML `<table>` grids — Library already provides a gal
 **Never update `.kolbo/production.md` merely because a generation succeeded.** Keep the result provisional in the generation card / Library, ask the user to choose, and write only the explicitly approved winner in the same turn as approval. Brief approval before generation is not output approval; silence, a topic change, or requesting the next task is not approval. See `references/workflows/production-log.md`.
 
 ## Available MCP Tools
+
+For personal font uploads, font selection, or reuse, read `references/workflows/personal-fonts.md`. Use the dedicated My Fonts tools; never the media-upload path or agent-rendered specimens.
+
+Font tools (when exposed by the installed MCP): `list_fonts`, `get_font`, `upload_font`, `get_font_upload_status`, `create_font_upload_ticket`, `font_upload_widget`, `rename_font`, `delete_font`. Image creation/editing and image-mode Creative Director accept `font_ids` only on models with `supports_custom_fonts`.
 
 ### Generation
 | Tool | Description |
