@@ -181,6 +181,8 @@ Avoid bare URL dumps and HTML `<table>` grids — Library already provides a gal
 
 ## Available MCP Tools
 
+For editable video timelines, read `references/workflows/video-editor.md`. Use `get_video_editor_schema`, `list_video_editor_sessions`, `get_video_editor_session`, `create_video_editor_session`, `update_video_editor_session`, and `export_video_editor_session`. Edit existing sessions in place using their saved revision; do not recreate them to rename or change clips.
+
 For personal font uploads, font selection, or reuse, read `references/workflows/personal-fonts.md`. Use the dedicated My Fonts tools; never the media-upload path or agent-rendered specimens.
 
 Font tools (when exposed by the installed MCP): `list_fonts`, `get_font`, `upload_font`, `get_font_upload_status`, `create_font_upload_ticket`, `font_upload_widget`, `rename_font`, `delete_font`. Image creation/editing and image-mode Creative Director accept `font_ids` only on models with `supports_custom_fonts`.
@@ -286,7 +288,7 @@ A user-named tool — in any language — overrides every other rule. Recognized
 4. **Pick the model**:
    - User named one → that name is a **family lock**, not a single catalog row. Use it. Identifiers resolve leniently — `"z-image"` / `"nano banana 2"` / `"grok imagine"` auto-resolve, including to the sibling for the tool you are calling (`grok-imagine-text-to-video` on `generate_video_from_image` becomes `grok-imagine-image-to-video`). `list_models` is still authoritative for constraints, caps, and pricing — not for swapping brands.
    - **Never cheapest-swap a named family.** After compaction, "animate those images" is still Grok if the user said Grok. Seedance / Kling / Veo are not a "best balance" substitute. If the named family has no variant for this modality, ASK — do not silently switch.
-   - Auto-select → **only when no model was named on this task**. Then pick from "Auto-selectable" (models with a `summary`). Cheapest fit. Prefer `[RECOMMENDED]` when cost is similar.
+   - Auto-select → **only when no model was named on this task**. Then pick from "Auto-selectable" (models with a `summary`). Follow Media selection preferences below: ordinary production uses the eligible general workhorse; select specialists for matching tasks and budget models for explicit cheap tests/drafts. Cost breaks ties between suitable choices.
    - Never auto-select from "Named-only" section.
 5. **Validate inputs** against model caps — see `references/workflows/cost-and-validation.md`.
 6. **Fire the call(s)** — then follow "⚠️ Generation lifecycle" below for waiting, status, and failure handling.
