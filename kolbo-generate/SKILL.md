@@ -1,5 +1,5 @@
 ---
-version: 0.9.16
+version: 0.9.17
 name: kolbo-generate
 description: |
   Generate any image / video / music / TTS / sound / 3D content via the Kolbo AI

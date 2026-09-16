@@ -1,5 +1,5 @@
 ---
-version: 0.9.16
+version: 0.9.17
 name: kolbo-html-artifacts
 description: |
   Build distinctive, production-grade HTML artifacts — slide decks /
