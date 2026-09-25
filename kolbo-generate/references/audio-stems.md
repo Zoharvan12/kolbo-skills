@@ -20,7 +20,7 @@ spoken, Kolbo folds that mask into Effects instead.
 "Give the editor stems" / dubbing / localisation     → separate_audio_stems, hand back ALL layers
 "I can still hear voices in the clean track"         → clean_dialogue_leftovers on the `me` URL
 "I want the room tone / atmosphere on its own"       → separate_ambience on the `sfx` URL
-Just want the words as text, not the audio           → transcribe_audio (references/workflows/transcription.md)
+Just want the words as text, not the audio           → transcribe_audio (references/transcription.md)
 ```
 
 Never reach for `edit_video({ operation: "generate_audio" })` for any of these — that ADDS a

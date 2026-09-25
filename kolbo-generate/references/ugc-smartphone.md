@@ -140,7 +140,7 @@ Everything above still applies. On top of it:
   captions or subtitles unless the user explicitly asked (they add those in CapCut, and
   baked-in captions kill reuse).
 
-Seedance's phone-vertical exception in `references/models/seedance25.md` is the same rule
+Seedance's phone-vertical exception in `references/seedance25.md` is the same rule
 from the model's side — read it before compiling a multi-shot UGC prompt.
 
 ---
