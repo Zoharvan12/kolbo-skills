@@ -1,5 +1,5 @@
 ---
-version: 0.9.18
+version: 0.9.19
 name: kolbo-filmmaking
 description: |
   Direct AI films end to end — script development, production bible, recurring
@@ -31,7 +31,8 @@ allowed-tools: Bash, Read, Write, Edit
 ## Media selection preferences
 Honor explicit models, presets, budget and inputs. Choose only eligible catalog candidates with all required capabilities. Use requested presets; otherwise use fitting presets when useful. For video generation, editing and lip-sync, when the user has not explicitly selected an output resolution, use the cheapest supported output resolution from the live catalog and pass it explicitly; do not inherit an expensive provider default. Preserve explicit user-selected resolution/settings. Finish fully, cinematic, professional, final, production and available credits are NOT permission to increase resolution. Never infer output resolution from reference media or export settings. A budget is a ceiling, not a spending target. Do not upscale or regenerate at a higher tier without explicit user authorization. If pricing or supported resolutions cannot be verified, inspect the catalog before dispatch; never invent a tier. Models with fixed output resolution use their native output. Never treat a policy refusal as a technical failure or route around safeguards.
 Default images and edits: GPT Image 2.5 Flare/Sunburst; medium for value, high for ordinary maximum quality. Reserve xhigh/max for exceptional dense or difficult multilingual text after medium/high prove insufficient; do not automatically spend on retries. Nano Banana 2 is secondary. Seedream 5.0 Pro favors cinematic aesthetics over complex instruction fidelity; Wan 2.7 Pro is another creative alternative. Z Image/P Image for cheap tests. Midjourney for artistic concepts only, never editing. Soul V2 for realistic people/UGC concepts; derive character sheets before registering finished Visual DNA. Mirage Film 2 for environments and cinematic inspiration.
-**Seedance 2.5 Draft:** explicitly pass `model: "seedance-2-5", resolution: "480p-draft"` on the matching video generation tool. Plain `480p` is regular video, never Draft. Use ordinary credits. Finalize a saved draft via `edit_video` `draft_quote` then authorized `draft_enhance`, with its video URL, original project and quoted supported resolution; do not regenerate the prompt. See `references/models/seedance25.md`.
+**Seedance 2.5 Draft:** explicitly pass `model: "seedance-2-5", draft: true` (or legacy `resolution: "480p-draft"`) on the matching video generation tool. Plain `480p` is regular video, never Draft. Use ordinary credits. Finalize a saved draft via `edit_video` `draft_quote` then authorized `draft_enhance`, with its video URL, original project and quoted supported resolution; do not regenerate the prompt. See `references/seedance25.md`.
+For Draft video editing, use `generate_video_from_video` with `model: "seedance-2-5-video-to-video", draft: true`. The source duration and aspect ratio are inherited. Draft uses regular edit 480p pricing; optional finalization uses regular edit 1080p pricing, both charging combined input/output seconds. Read the live catalog and quote rather than hardcoding prices. This app-credit/MCP route does not imply USD-wallet video-edit execution availability.
 
 Default video: Seedance 2.5 for general cinematic work (not Hebrew speech). Kling specializes in controlled single-image and first/last-frame shots. Wan 3.0 specializes in motion graphics and animated typography — native Hebrew speech is poor; attached-audio lip-sync works well. MiniMax H3 offers higher resolution and strong attached-audio lip-sync; H3 Max favors speed at lower resolution with the same audio lip-sync strength. **Native Hebrew dialogue:** Gemini Omni Flash 1.1 or Gemini Omni 1 (best). Seedance 2 / 2.5 do not speak Hebrew — use Latin transliteration in quotes on Seedance, or switch to Gemini Omni. Grok Imagine 1.5 and Seedance 2.0 are non-Hebrew alternatives. P Video/Draft for cheap fast tests. Use base, edit or extend variants only with their required inputs.
 Existing-video lip-sync: Sync 3 for active-speaker handling; PixVerse for cartoons/2D and economical faster work. Portrait lip-sync: Veed Fabric or HeyGen Avatar; P Avatar for budget work. LTX Audio to Video for camera/environment motion with audio-driven performance.
@@ -45,7 +46,7 @@ Once per conversation, before any other Kolbo tool call:
 2. **If `list_models` returns empty**, MCP isn't wired — same fix.
 3. Use the balance ONLY for the low-balance check at this moment (see the "credits remaining" rule in the brief section below).
 
-If the user is on a whitelabel build (`sapir`, etc.), they must use their branded command — not `kolbo`. See `references/workflows/troubleshooting.md`.
+If the user is on a whitelabel build (`sapir`, etc.), they must use their branded command — not `kolbo`. See `references/troubleshooting.md`.
 
 ## 🎬 Confirm the Creative Brief & Cost BEFORE Generating (CRITICAL — read first)
 
@@ -64,7 +65,7 @@ Then generate **only** with the confirmed parameters. If the user changes an opt
 
 **Only skip the brief/cost confirmation when** the user's message already pins model + aspect + count + creative direction (e.g. "generate 4 photoreal tabby cats, 1:1, z-image/turbo") — then just state the cost one-liner and fire. A low credit cost is **not** a reason to skip: cheap ≠ no-confirmation. What matters is whether the user actually chose the parameters.
 
-**Cost rules** (full tables + formulas in `references/workflows/cost-and-validation.md`):
+**Cost rules** (full tables + formulas in `references/cost-and-validation.md`):
 
 - **Video/lipsync `credit` is per-SECOND, not per-clip**: normally `total = credit × output_duration`. If video references are attached and `video_input_credit` is present, use the alternate provider tariff instead: `video_input_credit × (sum ceil(each input video duration) + output seconds) × video_input_resolution_multiplier`. Dedicated Seedance Edit uses its selected source duration as output; Extend uses the requested added duration. The other carve-out is `flat_credit_by_resolution`.
 - **Batch totalling 100+ credits**: run `check_credits` first.
@@ -82,17 +83,17 @@ Dependencies accumulate: narrative Elements work requires **Kolbo + filmmaking +
 
 | About to call / user intent | `skill` tool | Also Read |
 |---|---|---|
-| `generate_elements` **or** any video with Visual DNA **or** Seedance 2 / 2.5 / WAN / MiniMax H3 / Gemini video | `elements-prompting` | `references/models/seedance.md` (+ `seedance25.md` if 2.5) and `references/workflows/visual-dna.md` when DNA is in play |
-| `generate_image` / `generate_image_edit` | `image-prompting-guide` | `references/models/gpt-image.md` / `nano-banana.md` / `prompt-copilot.md` as the model requires. Complex stills / identity lock: `references/workflows/prompt-structure.md` |
+| `generate_elements` **or** any video with Visual DNA **or** Seedance 2 / 2.5 / WAN / MiniMax H3 / Gemini video | `elements-prompting` | `references/seedance.md` (+ `seedance25.md` if 2.5) and `references/visual-dna.md` when DNA is in play |
+| `generate_image` / `generate_image_edit` | `image-prompting-guide` | `references/gpt-image.md` / `nano-banana.md` / `prompt-copilot.md` as the model requires. Complex stills / identity lock: `references/prompt-structure.md` |
 | `generate_video*` that is **not** Elements/DNA (Kling, Veo, Sora, Grok, Hailuo, generic t2v/i2v) | `video-prompting-guide` | matching `references/models/*.md` |
-| `generate_music` | `music-prompting` | `references/models/music.md` |
-| UGC / phone-shot / selfie / "authentic" / must-not-look-like-an-ad | — | `references/workflows/ugc-smartphone.md` |
-| Marketing / TV spot / branded video / unboxing / product review | — | `references/workflows/marketing-studio.md` |
-| DTC ad image | — | `references/workflows/dtc-ads.md` |
-| Product photoshoot / hero / lifestyle / try-on | — | `references/workflows/product-photoshoot.md` |
-| Thumbnail / cover | — | `references/workflows/thumbnails.md` |
-| Marketplace listing cards | — | `references/workflows/marketplace-cards.md` |
-| Film / episode / connected scene | — | `references/workflows/filmmaking.md` + `production-planning.md` |
+| `generate_music` | `music-prompting` | `references/music.md` |
+| UGC / phone-shot / selfie / "authentic" / must-not-look-like-an-ad | — | `references/ugc-smartphone.md` |
+| Marketing / TV spot / branded video / unboxing / product review | — | `references/marketing-studio.md` |
+| DTC ad image | — | `references/dtc-ads.md` |
+| Product photoshoot / hero / lifestyle / try-on | — | `references/product-photoshoot.md` |
+| Thumbnail / cover | — | `references/thumbnails.md` |
+| Marketplace listing cards | — | `references/marketplace-cards.md` |
+| Film / episode / connected scene | — | `references/filmmaking.md` + `production-planning.md` |
 
 ## ⚠️ Visual DNA `@Name` in the prompt (HARD RULE — always on)
 
@@ -108,9 +109,9 @@ Passing `visual_dna_ids` is **not enough**. For every DNA in that array you MUST
 
 Before ANY generation call using `visual_dna_ids` (images, edits, Elements, or Creative Director): resolve each id to its stored `name` from the selected asset binding or `list_visual_dnas` / `get_visual_dna`, then confirm the final prompt includes the exact `@` + name. Missing or rewritten even one → fix the prompt, do not fire.
 
-Resolve names with `list_visual_dnas` first. Full binding rules: `references/workflows/visual-dna.md`.
+Resolve names with `list_visual_dnas` first. Full binding rules: `references/visual-dna.md`.
 
-**Every still on a DNA can reach the model.** Kolbo now sends all of a DNA's reference images that fit the model's image-slot cap (user uploads first, then one still per DNA, then leftovers round-robin). If a DNA only gets one leftover slot and has no real character sheet, unused stills become a white grid. Mixed-vibe stills or environment photos that contain a main character will confuse the generation — keep each DNA surgically clean. Create-and-pack rules: `references/workflows/visual-dna.md`.
+**Every still on a DNA can reach the model.** Kolbo now sends all of a DNA's reference images that fit the model's image-slot cap (user uploads first, then one still per DNA, then leftovers round-robin). If a DNA only gets one leftover slot and has no real character sheet, unused stills become a white grid. Mixed-vibe stills or environment photos that contain a main character will confuse the generation — keep each DNA surgically clean. Create-and-pack rules: `references/visual-dna.md`.
 
 ## 📁 Projects — Where Work Lands (CRITICAL)
 
@@ -140,7 +141,7 @@ How to thread:
 3. New scene or new concept → new session. Same scene / same cast pass → never a new session.
 4. Image tools and video tools cannot share an id (server kinds differ). Cast/Locations stay image; scene clips stay video.
 
-After the user approves a bucket, write its `session_id` + plan name into `.kolbo/production.md` `### Sessions`. Do not create or update the file for a pending bucket. Full rules: `references/workflows/production-planning.md` + `production-log.md`.
+After the user approves a bucket, write its `session_id` + plan name into `.kolbo/production.md` `### Sessions`. Do not create or update the file for a pending bucket. Full rules: `references/production-planning.md` + `production-log.md`.
 
 ## ⚠️ Generation lifecycle — source of truth, waiting, failures (HARD RULE — read this)
 
@@ -173,7 +174,7 @@ Four surfaces show the same job. Use this map — never invent a fifth:
 - Log only successful results the user explicitly approves to `.kolbo/production.md` — never pending, rejected, or failed items.
 - When done: say the result is in **Library → This session**. "Where is it?" → Library (This session). "Is it done?" with no urls yet → `get_generation_status` once.
 
-`failure` envelope structure + retry rules: `references/workflows/troubleshooting.md`.
+`failure` envelope structure + retry rules: `references/troubleshooting.md`.
 
 ## ⚠️ Generated URLs in Chat (CRITICAL)
 
@@ -186,7 +187,7 @@ Avoid bare URL dumps and HTML `<table>` grids — Library already provides a gal
 
 **After `generate_creative_director` completes** — share results as individual URLs, one per scene. Do NOT create an HTML grid artifact.
 
-**Never update `.kolbo/production.md` merely because a generation succeeded.** Keep the result provisional in the generation card / Library, ask the user to choose, and write only the explicitly approved winner in the same turn as approval. Brief approval before generation is not output approval; silence, a topic change, or requesting the next task is not approval. See `references/workflows/production-log.md`.
+**Never update `.kolbo/production.md` merely because a generation succeeded.** Keep the result provisional in the generation card / Library, ask the user to choose, and write only the explicitly approved winner in the same turn as approval. Brief approval before generation is not output approval; silence, a topic change, or requesting the next task is not approval. See `references/production-log.md`.
 
 ## Filmmaking Router
 
@@ -211,11 +212,11 @@ Do not generate media, spend credits, or contact external systems unless the use
 
 ### Route the work
 
-Read [routing.md](references/filmmaking/routing.md) for the full decision rules.
+Read [routing.md](references/routing.md) for the full decision rules.
 
 | Request | Mode | Read |
 |---|---|---|
-| Any multi-asset or multi-scene production — film, ad, episode, campaign, recurring or multiple characters | Production planning | `references/workflows/production-planning.md` **first** — map assets, build the DNAs, confirm the set, only then shoot |
+| Any multi-asset or multi-scene production — film, ad, episode, campaign, recurring or multiple characters | Production planning | `references/production-planning.md` **first** — map assets, build the DNAs, confirm the set, only then shoot |
 | Premise, outline, screenplay, weak scene | Development | `scene-engine.md`, then `workflows.md` |
 | Character, location, prop, state, voice, or production preparation | Pre-production | `asset-preproduction.md`, `production-bible.md`; add `acting-direction.md` for recurring characters |
 | One generation-ready video prompt | Direction | `prompt-contracts.md`, selected craft references, then the model adapter |
@@ -227,15 +228,15 @@ Read [routing.md](references/filmmaking/routing.md) for the full decision rules.
 | Multi-scene, episode, commercial, music video, or feature workflow | Production | `production-bible.md`, `workflows.md`, `validation.md` |
 
 Craft packs named in the table above (load only what the shot needs):
-[scene-engine.md](references/filmmaking/scene-engine.md) ·
-[asset-preproduction.md](references/filmmaking/asset-preproduction.md) ·
-[acting-direction.md](references/filmmaking/acting-direction.md) ·
-[blocking-continuity.md](references/filmmaking/blocking-continuity.md) ·
-[cinematography.md](references/filmmaking/cinematography.md) ·
-[physics-action.md](references/filmmaking/physics-action.md) ·
-[audio-dialogue-music.md](references/filmmaking/audio-dialogue-music.md)
+[scene-engine.md](references/scene-engine.md) ·
+[asset-preproduction.md](references/asset-preproduction.md) ·
+[acting-direction.md](references/acting-direction.md) ·
+[blocking-continuity.md](references/blocking-continuity.md) ·
+[cinematography.md](references/cinematography.md) ·
+[physics-action.md](references/physics-action.md) ·
+[audio-dialogue-music.md](references/audio-dialogue-music.md)
 
-For Seedance 2.5, always read [seedance-2-5.md](references/models/seedance25.md) before final compilation. Treat capability numbers as a dated adapter snapshot and verify them against current provider/catalog truth when real money or production delivery depends on them.
+For Seedance 2.5, always read [seedance-2-5.md](references/seedance25.md) before final compilation. Treat capability numbers as a dated adapter snapshot and verify them against current provider/catalog truth when real money or production delivery depends on them.
 
 ### Keep two layers separate
 
@@ -249,7 +250,7 @@ Maintain durable facts outside individual prompts:
 - props, vehicles, creatures, scale laws, ownership, hand state, damage, and versions;
 - scene and shot cards, continuity state, coverage, generation attempts, and editorial needs.
 
-Use the templates in `assets/filmmaking/` when the task benefits from saved project state. Read [production-bible.md](references/filmmaking/production-bible.md) before creating or updating them.
+Use the templates in `assets/filmmaking/` when the task benefits from saved project state. Read [production-bible.md](references/production-bible.md) before creating or updating them.
 
 #### Generation island
 
@@ -259,7 +260,7 @@ Kolbo Visual DNA is semantic project truth, not merely reference imagery. Read a
 
 ### Compile a shot
 
-Read [prompt-contracts.md](references/filmmaking/prompt-contracts.md) for exact structures.
+Read [prompt-contracts.md](references/prompt-contracts.md) for exact structures.
 
 Before writing, establish:
 
@@ -275,7 +276,7 @@ Before writing, establish:
 
 Prompt-length limits apply to the entire compiled generation prompt as one string, including whitespace, headers, timecodes, dialogue, audio, and locks. Count after compilation; read the cap from `max_prompt_length` via `list_models` (see `models/seedance25.md`).
 
-**Seedance 2 / Seedance 2.5 / `generate_elements` — Locked Intro is the only compile shape.** Read `references/models/seedance.md` (and `seedance25.md` for 2.5 caps). Do not emit the SCENE CONTEXT / OPTICS / ACTION department pack below as the generation prompt. Every Visual DNA in play must be `@ExactName` in CAST and in each shot — never "the left man" or a possessive.
+**Seedance 2 / Seedance 2.5 / `generate_elements` — Locked Intro is the only compile shape.** Read `references/seedance.md` (and `seedance25.md` for 2.5 caps). Do not emit the SCENE CONTEXT / OPTICS / ACTION department pack below as the generation prompt. Every Visual DNA in play must be `@ExactName` in CAST and in each shot — never "the left man" or a possessive.
 
 ```text
 Total: Xs / N shots / AR
@@ -315,7 +316,7 @@ Do not keep polishing adjectives when the shot is physically or structurally ove
 
 ### Validate
 
-Read [validation.md](references/filmmaking/validation.md). At minimum check:
+Read [validation.md](references/validation.md). At minimum check:
 
 - all referenced assets exist and match the intended state;
 - no stale, invented, dangling, or conflicting tags;
@@ -339,6 +340,40 @@ Fix errors before delivery. Report warnings that represent genuine creative trad
 
 ### Production workflows
 
-Read [workflows.md](references/filmmaking/workflows.md) for single shots, dialogue scenes, music performance, connected sequences, impossible shots, and feature workflows.
+Read [workflows.md](references/workflows.md) for single shots, dialogue scenes, music performance, connected sequences, impossible shots, and feature workflows.
 
 This workflow is part of the canonical Kolbo skill. The Kobi Code sync pipeline mirrors it to MCP and plugin consumers; product surfaces may compile the same filmmaking truth through their own model adapters.
+
+## Bundled references
+
+- [acting-direction](references/acting-direction.md)
+- [asset-preproduction](references/asset-preproduction.md)
+- [audio-dialogue-music](references/audio-dialogue-music.md)
+- [blocking-continuity](references/blocking-continuity.md)
+- [cinematography](references/cinematography.md)
+- [physics-action](references/physics-action.md)
+- [production-bible](references/production-bible.md)
+- [prompt-contracts](references/prompt-contracts.md)
+- [routing](references/routing.md)
+- [scene-engine](references/scene-engine.md)
+- [validation](references/validation.md)
+- [workflows](references/workflows.md)
+- [gpt-image](references/gpt-image.md)
+- [music](references/music.md)
+- [nano-banana](references/nano-banana.md)
+- [seedance](references/seedance.md)
+- [seedance25](references/seedance25.md)
+- [veo](references/veo.md)
+- [cost-and-validation](references/cost-and-validation.md)
+- [dtc-ads](references/dtc-ads.md)
+- [filmmaking](references/filmmaking.md)
+- [marketing-studio](references/marketing-studio.md)
+- [marketplace-cards](references/marketplace-cards.md)
+- [product-photoshoot](references/product-photoshoot.md)
+- [production-log](references/production-log.md)
+- [production-planning](references/production-planning.md)
+- [prompt-structure](references/prompt-structure.md)
+- [thumbnails](references/thumbnails.md)
+- [troubleshooting](references/troubleshooting.md)
+- [ugc-smartphone](references/ugc-smartphone.md)
+- [visual-dna](references/visual-dna.md)
