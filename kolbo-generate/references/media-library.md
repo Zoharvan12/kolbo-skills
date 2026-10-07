@@ -87,7 +87,7 @@ fails to open (exit 26).
 | "Restore it" / "undelete" / "bring it back from trash" | `restore_media` |
 | "Permanently delete" / "wipe it forever" / "free up space" | **confirm with user** → `permanently_delete_media` |
 | "Move this to project X" | `move_media` |
-| "Move this whole session/chat to project X" / "this landed in the wrong project" | `move_session` (moves the session + ALL its media in one call — prefer over per-item `move_media`) |
+| "Move this whole session/chat to project X" / "this landed in the wrong project" | `move_session` (moves the session + ALL its media in one call — prefer over per-item `move_media`). Creative Director, transcription, global_image_edit and shorts sessions return `SESSION_TYPE_NOT_MOVABLE` — use `bulk_move_media` on their items |
 | "Clean up old [type]" / "delete everything from [time period]" | `list_media` (find ids) → **confirm** → `bulk_delete_media` |
 | "Restore all from trash" | `list_media include_deleted=true` → `bulk_restore_media` |
 | "Empty my trash" / "purge deleted items" | `list_media include_deleted=true` → **show count, confirm** → `bulk_permanently_delete_media` |

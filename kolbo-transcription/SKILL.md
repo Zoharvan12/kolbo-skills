@@ -1,5 +1,5 @@
 ---
-version: 0.9.19
+version: 0.9.22
 name: kolbo-transcription
 description: |
   Transcribe audio/video into text + SRT subtitles + word-by-word SRT, and route
@@ -118,7 +118,7 @@ Everything in Kolbo — sessions, generations, media, docs — lives inside a PR
 
 1. **User names a project** ("in my Acme project", "for the film") → call `list_projects` ONCE to resolve the name to an ObjectId, then pass that **same** id as `project_id` on **EVERY** subsequent `generate_*` / `upload_media` / `create_doc` / `chat_send_message` call in **this conversation**. There is no server-side sticky store — omitting it on any later call silently lands in the default "API Generations" bucket (`is_default: true`). Once resolved, treat that id as required for the rest of the conversation. Accounts often hold hundreds of projects, so pass `list_projects({ search: "acme" })` rather than listing everything; the list is paginated (50/page) and hides archived projects unless you pass `include_archived: true`. When the user starts new work, `create_project` first, then pass its id the same way.
 2. **No project mentioned** → omit `project_id`; the default bucket is correct. Don't ask unless intent is ambiguous. If `list_sessions` already returned a `project_id` for the work you are continuing, keep passing that id.
-3. **Work landed in the wrong project? MOVE it, never regenerate**: `move_session` relocates a whole session + all its media (works for any session type — the `session_id` from generation responses, chats, transcriptions); `move_media` / `bulk_move_media` / `move_folder_contents` relocate individual media items. Empty leftover sessions after a move: `delete_session` (soft-delete; `restore_session` undoes it). `rename_session` only changes the sidebar title.
+3. **Work landed in the wrong project? MOVE it, never regenerate**: `move_session` relocates a whole session + all its media (generation sessions and chats; Creative Director, transcription, global_image_edit and shorts sessions return `SESSION_TYPE_NOT_MOVABLE` — move their media with `bulk_move_media` instead); `move_media` / `bulk_move_media` / `move_folder_contents` relocate individual media items. Empty leftover sessions after a move: `delete_session` (soft-delete; `restore_session` undoes it). `rename_session` only changes the sidebar title.
 
 ## ⚠️ One session per plan bucket (HARD RULE)
 
@@ -194,19 +194,20 @@ Load this file when the user wants to transcribe audio/video, get SRT subtitles,
 
 ### Decision Tree
 
-You have three routes. The right one depends on the file profile — pick before calling any tool.
+Pick the route from the question and coverage needed. For long recordings or iterative evidence review, first read `video-investigation.md`.
 
 ```
 Image (jpg/png/webp)?                         → Read directly (native vision, up to 10 per pass)
-Any QUESTION about a video (what/when/how many/summarize/describe)? → analyze_video (agentic — the default for video)
+Long recording / cuts / verified content or audiovisual investigation? → prepare_video_inspection → inspect_video → targeted evidence analysis/ASR
+One-off short video or YouTube question?      → analyze_video
 User wants the transcript/SRT as deliverable? → transcribe_audio, return the URLs
-Precise answer about one specific frame?      → ffmpeg that frame → Read
+Precise answer about one specific frame?      → inspect_video kind=frame at a source timestamp
 File is only reachable locally and >100MB?    → split with ffmpeg, or HYBRID below
 ```
 
-### `analyze_video` — Kolbo's official video understanding (use this first)
+### `analyze_video` — one-off video understanding
 
-Agentic Gemini: instead of sampling the video at a fixed frame rate, the model navigates the timeline itself — loading frames, audio, and the transcript only where the question needs them. That removes the two old failure modes below (long-form decay, transcription-dense laziness): a 90-minute lecture is answered from the parts that matter, at a fraction of the tokens.
+Agentic Gemini can navigate selected frames/audio/transcript. It remains bounded by provider limits, timeout and model behavior; do not assume it reviewed an entire recording. For long-form investigation use the prepared-source evidence workflow so the agent controls coverage and can verify or revise findings.
 
 - `video_url` (public https, e.g. the URL returned by `upload_media` / `list_media`) **or** `youtube_url`.
 - `prompt`: the question. Ask directly — "At what timestamp does the logo appear?", "How many people speak, and who says X?", "List every product shown with its time". Omit for a full description + verbatim transcript.
