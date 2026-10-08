@@ -1,5 +1,5 @@
 ---
-version: 0.9.23
+version: 0.9.24
 name: kolbo-generate
 description: |
   Generate any image / video / music / TTS / sound / 3D content via the Kolbo AI
@@ -11,14 +11,15 @@ description: |
   generation or Flow node/session/prompt editing and runs.
 
   Chain: pair with kolbo-visual-dna (consume vdna_id via `visual_dna_ids`),
-  hand off multi-output requests to kolbo-creative-director, hand off
+  use kolbo-creative-director when that tool is explicitly requested, hand off
   Marketing Studio / DTC / product / marketplace work to the matching skill,
-  hand off HTML artifacts to kolbo-html-artifacts.
+  hand off HTML artifacts to kolbo-html-artifacts and episodic vertical drama
+  to kolbo-micro-drama. Ordinary batches remain separate generation calls.
 
-  NOT for: 2+ related outputs (use kolbo-creative-director), branded ad video
+  NOT for: explicit Creative Director requests (use kolbo-creative-director), branded ad video
   (use kolbo-marketing-studio), brand product imagery (use kolbo-product-photoshoot),
   marketplace cards (use kolbo-marketplace-cards), HTML artifacts (use
-  kolbo-html-artifacts), full React apps (use kolbo-app-builder).
+  kolbo-html-artifacts), or full React application development.
 argument-hint: "[prompt-or-command] [--model NAME] [--image <path>] [--video <path>]"
 allowed-tools: Bash, Read, Write, Edit
 ---
@@ -191,7 +192,7 @@ Avoid bare URL dumps and HTML `<table>` grids — Library already provides a gal
 
 ## Available MCP Tools
 
-For editable video timelines, read `references/video-editor.md`. Use `get_video_editor_schema`, `list_video_editor_sessions`, `get_video_editor_session`, `create_video_editor_session`, `update_video_editor_session`, and `export_video_editor_session`. Edit existing sessions in place using their saved revision; do not recreate them to rename or change clips.
+For music composition/reference/section edits, extensions and covers, Trends and Motion Library, Morphious Styles, Creative Director status, project copies and transfer responses, read `references/tool-operations.md`. For editable video timelines, read `references/video-editor.md`. Use `get_video_editor_schema`, `list_video_editor_sessions`, `get_video_editor_session`, `create_video_editor_session`, `update_video_editor_session`, and `export_video_editor_session`. Edit existing sessions in place using their saved revision; do not recreate them to rename or change clips.
 
 For personal font uploads, font selection, or reuse, read `references/personal-fonts.md`. Use the dedicated My Fonts tools; never the media-upload path or agent-rendered specimens.
 
@@ -202,7 +203,7 @@ Font tools (when exposed by the installed MCP): `list_fonts`, `get_font`, `uploa
 |------|-------------|
 | `generate_image` | Single image from a text prompt. Supports Visual DNA, moodboards, image presets (custom instructions live here), reference images, web-search grounding. Named sheets/styles: `list_presets({ type: "image", search: "headless" })` then `preset_id`.  NO BACKGROUND: require `supports_transparent_background: true` from `list_models`, then pass `background: "transparent"` with PNG/WebP — Kolbo appends the phrase `no background` once; prompt wording alone does not replace the setting. MIDJOURNEY ALWAYS RETURNS 4 IMAGES PER PROMPT (`images_per_request: 4`; `num_images` is ignored): "4 options" is ONE Midjourney prompt, never 4 calls or 4 `prompts[]` entries; 2 prompts = 8 images. Tell the user they will get 4 per prompt. |
 | `generate_image_edit` | Edit/transform an existing image. Pass `source_images` + edit prompt. Image-editing presets are supported through `preset_id` from `list_presets({ type: "image_edit" })`.  Native no-background output uses the same capability gate and `background: "transparent"` contract as `generate_image`. |
-| `generate_creative_director` | **2–8 related images or videos as one coherent set.** Use INSTEAD of multiple `generate_image` calls for any related multi-output. |
+| `generate_creative_director` | **2–8 related images or videos as one coherent set.** Use when the user explicitly requests Creative Director, Photo Auto Pilot, Video Auto Pilot or Cinema Manual; ordinary batches stay in Generate. |
 | `generate_video` | Text-to-video. Accepts `visual_dna_ids` and `sound_enabled`; `generate_elements` is still the primary reference-driven route for a DNA-anchored film. |
 | `generate_video_from_image` | Animate a still. Prompt describes motion, not subject. |
 | `generate_video_from_video` | Restyle/transform an existing video. Keeps original motion. |
@@ -232,7 +233,7 @@ Font tools (when exposed by the installed MCP): `list_fonts`, `get_font`, `uploa
 | `list_models` / `list_voices` / `check_credits` / `show_plans` / `get_generation_status` / `cancel_generation` / `get_session_usage` | Discovery + status. `list_models` with no args returns the recommended shortlist out of ~428 — pass `type` for a full category with per-model caps. `cancel_generation` stops an in-flight job and refunds what it can: use it when the user changes their mind mid-generation instead of letting it run. `show_plans` renders the balance + upgrade card for pricing/plan/upgrade questions. |
 | `download_media_from_url` / `get_download_status` / `cancel_download` | Download a public social/video page URL to Kolbo storage. Async job; use download status, not generation status. See `workflows/media-library.md`. |
 | `upload_media` / `create_upload_ticket` / `list_media` / `get_media` / `get_media_stats` / `favorite_media` / `unfavorite_media` / `delete_media` / `restore_media` / `permanently_delete_media` / `move_media` / `bulk_*_media` / `*_media_folder` | Media library — see `workflows/media-library.md`. Getting a LOCAL file in depends on where the server runs: `upload_media` with a path only works on a local (stdio) install; over a remote connector use `create_upload_ticket` and POST the file yourself. |
-| `create_visual_dna` / `update_visual_dna` / `generate_character_sheet` / `list_visual_dnas` / `get_visual_dna` / `delete_visual_dna` / `*_visual_dna_folder` (5 folder tools) | Visual DNA (+ character sheet and character folders) — see `workflows/visual-dna.md`. Edit with `update_visual_dna`; never delete+recreate. Account transfers use the Kolbo UI until the MCP tools ship. |
+| `create_visual_dna` / `update_visual_dna` / `generate_character_sheet` / `list_visual_dnas` / `get_visual_dna` / `delete_visual_dna` / `*_visual_dna_folder` (5 folder tools) | Visual DNA (+ character sheet and character folders) — see `workflows/visual-dna.md`. Edit with `update_visual_dna`; never delete+recreate. For account transfers, follow the dedicated transfer tools and approval rules in that reference when exposed by the connected MCP. |
 | `list_moodboards` / `get_moodboard` / `list_presets` / `list_cinematic_presets` | Style overlays + presets. `list_presets` spans FOUR distinct catalogs (`image`, `image_edit`, `video`, `music`; `text_to_video` is an alias for `video`, `shorts` is empty) — the `video` one holds 200+ Seedance shot recipes. `list_cinematic_presets` is a separate tool feeding the `cinematic` arg, never `preset_id`. Full doctrine + intent→catalog map: `references/presets.md`. Never omit `preset_id` after claiming a preset was used. |
 | `list_color_palettes` / `analyze_color_palette` / `create_color_palette` / `update_color_palette` / `delete_color_palette` / `activate_color_palette` / `deactivate_color_palette` | **Color DNA — sticky + account-wide; at most one palette active at a time**, and while active it strict-grades **every** image and video generation automatically. Per-generation opt-out: `skip_color_palette: true`. Details: `workflows/color-dna.md`. |
 | `list_agents` / `create_agent` / `update_agent` / `delete_agent` (same tools as `list_skills` / `create_skill` / `update_skill` / `delete_skill`) | Custom chat agents — reusable named personas for `chat_send_message`. The agent's `description` IS the system instruction. Resolve a name the user mentions ("use my SEO agent") to an id with `list_agents` (paged: `page` / `limit`, follow `pagination.has_more`), then pass `agent_id`. Global/preset agents are read-only; only the user's own can be updated or deleted. |
@@ -390,6 +391,7 @@ Skip frames-first only when the user says "go straight to video", single-shot qu
 - [production-planning](references/production-planning.md)
 - [prompt-structure](references/prompt-structure.md)
 - [thumbnails](references/thumbnails.md)
+- [tool-operations](references/tool-operations.md)
 - [transcription](references/transcription.md)
 - [troubleshooting](references/troubleshooting.md)
 - [ugc-smartphone](references/ugc-smartphone.md)

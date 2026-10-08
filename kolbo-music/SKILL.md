@@ -1,5 +1,5 @@
 ---
-version: 0.9.23
+version: 0.9.24
 name: kolbo-music
 description: |
   Generate music via Kolbo — primarily Suno + variants. Full songs, lyrics,

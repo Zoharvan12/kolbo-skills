@@ -1,5 +1,5 @@
 ---
-version: 0.9.23
+version: 0.9.24
 name: kolbo-filmmaking
 description: |
   Direct AI films end to end — script development, production bible, recurring
@@ -12,6 +12,9 @@ description: |
   "the acting feels dead", "the eyes look empty", "audit this prompt",
   "my last take failed, fix the prompt", "plan a multi-shot sequence",
   "storyboard this", "shot list", "continuity between cuts".
+
+  For a vertical micro-drama or episodic short-form drama series, use
+  kolbo-micro-drama; it reuses these filmmaking craft references.
 
   Chain: develop scene (scene engine) → production bible + Visual DNA
   (kolbo-visual-dna) → shot cards → generate via kolbo-generate /

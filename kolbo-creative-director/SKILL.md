@@ -1,5 +1,5 @@
 ---
-version: 0.9.23
+version: 0.9.24
 name: kolbo-creative-director
 description: |
   Generate 2–8 related image OR video outputs from one brief — storyboards, ad
@@ -7,11 +7,10 @@ description: |
   This is an AGENT, not a niche tool — it plans each scene's prompt internally,
   locks consistency, and runs scenes in parallel.
 
-  Use when: "make 4/6/8 [shots, scenes, variations, angles, poses, outfits,
-  moods, settings, frames]", "show the character in N different ___",
-  "create a storyboard / ad campaign / product set", "key frames for a video",
-  "8 angles of this character", "ad pack with 4 variants",
-  "campaign batch", "lookbook", "scene 1 scene 2 scene 3".
+  Use when the user explicitly names Creative Director, Photo Auto Pilot,
+  Video Auto Pilot, or Cinema Manual, in any language. A request for several
+  images, clips, angles or scenes alone does not select this tool: use
+  kolbo-generate unless Creative Director is explicitly requested.
 
   Chain: pair with kolbo-visual-dna (lock character across scenes), then optionally
   with kolbo-generate (animate each frame via generate_video_from_image).
