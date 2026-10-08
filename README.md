@@ -1,12 +1,12 @@
 # Kolbo AI Skills
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-0.4.0-green.svg)](./VERSION)
-[![Skills](https://img.shields.io/badge/skills-11-blueviolet.svg)](#skills)
+[![Version](https://img.shields.io/badge/version-0.9.24-green.svg)](./VERSION)
+[![Skills](https://img.shields.io/badge/skills-12-blueviolet.svg)](#skills)
 
-AI agent skills for **image / video / music / 3D / branded ads / product photography / marketplace listings / full apps** via [Kolbo AI](https://kolbo.ai). Works with Claude Code, Cursor, Codex, and any other AI coding agent that loads Markdown-based skills.
+AI agent skills for **image / video / music / 3D / branded ads / product photography / marketplace listings / episodic drama** via [Kolbo AI](https://kolbo.ai). Works with Claude Code, Cursor, Codex, and any other AI coding agent that loads Markdown-based skills.
 
-100+ models behind Smart Select routing (Nano Banana, GPT Image 2, Seedance 2, Veo 3.1, Kling, Flux, Suno, ElevenLabs, …), Visual DNA for face-faithful identity, Marketing Studio for UGC + DTC ads, 10-mode product photoshoot, Amazon/Shopify marketplace cards, HTML artifact publishing, full React app generation.
+100+ models behind Smart Select routing (Nano Banana, GPT Image 2, Seedance 2, Veo 3.1, Kling, Flux, Suno, ElevenLabs, …), Visual DNA for face-faithful identity, Marketing Studio for UGC + DTC ads, 10-mode product photoshoot, Amazon/Shopify marketplace cards, HTML artifact publishing, end-to-end filmmaking and micro-drama series.
 
 ## Install
 
@@ -66,8 +66,10 @@ More options in [INSTALL.md](./INSTALL.md). Agent-driven install (paste into you
 
 | Skill | Invoke | Description |
 |---|---|---|
+| [`kolbo-filmmaking`](./kolbo-filmmaking) | `/kolbo:filmmaking` | Film development, acting, camera direction and continuity. |
+| [`kolbo-micro-drama`](./kolbo-micro-drama) | `/kolbo:micro-drama` | Vertical drama series: bible, cast, voices, Draft episodes, approved finals, edits, trailers and key art. |
 | [`kolbo-generate`](./kolbo-generate) | `/kolbo:generate` | Catch-all image / video / music / TTS / sound / 3D generation across 100+ models. Default entry point for "generate X" requests. |
-| [`kolbo-creative-director`](./kolbo-creative-director) | `/kolbo:creative-director` | 2–8 related outputs from one brief — storyboards, ad campaigns, character lookbooks, multi-angle/multi-pose sets. Replaces parallel `generate_image` loops. |
+| [`kolbo-creative-director`](./kolbo-creative-director) | `/kolbo:creative-director` | 2–8 related outputs from one brief — storyboards, ad campaigns, character lookbooks, multi-angle/multi-pose sets. Use when Creative Director is explicitly requested. |
 | [`kolbo-marketing-studio`](./kolbo-marketing-studio) | `/kolbo:marketing-studio` | Branded ad **video** — 9 modes: UGC, unboxing, tutorial, product review, TV spot, product showcase, virtual try-on, wild card. Defaults to 9:16 / no captions / no watermarks for UGC. |
 | [`kolbo-dtc-ads`](./kolbo-dtc-ads) | `/kolbo:dtc-ads` | Composed brand ad **images** — brand kit + ad format + optional avatar / product / reference media. |
 | [`kolbo-product-photoshoot`](./kolbo-product-photoshoot) | `/kolbo:product-photoshoot` | Brand product imagery — 10 modes (studio, lifestyle, Pinterest pin, hero banner, social carousel, ad creative pack, virtual try-on, conceptual, restyle). |
@@ -76,7 +78,6 @@ More options in [INSTALL.md](./INSTALL.md). Agent-driven install (paste into you
 | [`kolbo-music`](./kolbo-music) | `/kolbo:music` | Music generation (Suno + variants) — full songs, lyrics, instrumentals, jingles, scores, lo-fi beats, trailers. |
 | [`kolbo-html-artifacts`](./kolbo-html-artifacts) | `/kolbo:html-artifacts` | HTML artifacts — presentations / slide decks, landing pages, dashboards, data viz, interactive widgets, mini-games. Publishable to `sites.kolbo.ai`. |
 | [`kolbo-transcription`](./kolbo-transcription) | `/kolbo:transcription` | Audio/video transcription (SRT + word-by-word) + multimodal analysis routing (Gemini-via-chat vs hybrid). |
-| [`kolbo-app-builder`](./kolbo-app-builder) | `/kolbo:app-builder` | Generate full React apps with GitHub repo + Supabase + live deployment in one flow. |
 
 ### Skills chain
 
@@ -102,7 +103,6 @@ When a request needs multiple skills ("train Visual DNA on these photos AND make
 | Song / jingle / instrumental / cinematic score / lo-fi beat | `kolbo-music` |
 | Slide deck / pitch deck / landing page / dashboard / data viz / mini-game | `kolbo-html-artifacts` |
 | Transcribe audio/video → SRT / word-by-word / text | `kolbo-transcription` |
-| Build me a todo app / SaaS / waitlist page (full React) | `kolbo-app-builder` |
 
 ## Architecture
 
