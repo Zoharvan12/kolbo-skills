@@ -1,5 +1,5 @@
 ---
-version: 0.9.24
+version: 0.9.25
 name: kolbo-creative-director
 description: |
   Generate 2–8 related image OR video outputs from one brief — storyboards, ad

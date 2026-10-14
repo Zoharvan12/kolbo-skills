@@ -1,5 +1,5 @@
 ---
-version: 0.9.24
+version: 0.9.25
 name: kolbo-marketplace-cards
 description: |
   Generate marketplace listing visuals for Amazon / Shopify / eBay / Etsy /
