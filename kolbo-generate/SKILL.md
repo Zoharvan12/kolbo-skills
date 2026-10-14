@@ -260,9 +260,7 @@ Font tools (when exposed by the installed MCP): `list_fonts`, `get_font`, `uploa
 
 ## ⚠️ Seedance / Elements prompt contract (HARD RULE)
 
-Mode wins over model family. **Frames** (`generate_video_from_image`) and **First/Last Frame** (`generate_first_last_frame`) use ordinary motion/camera/transition prose grounded in the supplied composition, including on Seedance 2.5. Do not add Elements CAST/LOCATION blocks, invent DNA names, or enable cuts because a template says so. An ordinary uploaded frame is `@Image1`, not a DNA; an end frame is `@Image2`.
-
-For **Elements / text-driven multi-shot** work, `generate_elements`, Seedance 2 / 2.5, WAN, MiniMax H3, Gemini, and reference-composed video share the Locked Intro in `references/seedance.md`. Load `elements-prompting` first (craft, exact `@ImageN` mapping, eight elements), then compile:
+Mode wins over model family. **Frames** (`generate_video_from_image`) and **First/Last Frame** (`generate_first_last_frame`) use ordinary motion/camera/transition prose grounded in the supplied composition, including on Seedance 2.5. Do not add Elements CAST/LOCATION blocks, invent DNA names, or enable cuts because a template says so. An ordinary uploaded frame is `@Image1`, not a DNA; an end frame is `@Image2`. For **Elements / text-driven multi-shot** work, `generate_elements`, Seedance 2 / 2.5, WAN, MiniMax H3, Gemini, and reference-composed video share the Locked Intro in `references/seedance.md`. Load `elements-prompting` first (craft, exact `@ImageN` mapping, eight elements), then compile:
 
 `N connected cinematic shots, Xs total, AR, Multishot ON` → `Total: Xs / N shots / AR` → `[GLOBAL LOOK – LOCKED, APPLIES TO EVERY SHOT]` → `[CAST – IDENTICAL IN EVERY SHOT]` (each person is `@DNAName`) → `[LOCATION]` → LOCATION MAP / CONTINUITY / PHYSICS → `SHOT N — 0:00–0:02 — …` (ranges sum to Xs) → closing `Total: Xs / N shots / AR`. Pass MCP `duration: X` matching that Total. Omitting Total / Multishot is a failed compile — same contract as the Kolbo help widget.
 
