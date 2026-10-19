@@ -1,5 +1,5 @@
 ---
-version: 0.9.24
+version: 0.9.25
 name: kolbo-marketing-studio
 description: |
   Generate branded ad VIDEO — UGC, unboxing, tutorial, product review, TV spot,
