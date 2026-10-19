@@ -1,5 +1,5 @@
 ---
-version: 0.9.25
+version: 0.9.24
 name: kolbo-micro-drama
 description: |
   Create a vertical micro-drama or short-form drama series in Kolbo.AI,
