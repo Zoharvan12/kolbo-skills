@@ -94,7 +94,6 @@ Dependencies accumulate: narrative Elements work requires **Kolbo + filmmaking +
 | Film / episode / connected scene | — | `references/filmmaking.md` + `production-planning.md` |
 
 ## ⚠️ Visual DNA `@Name` in the prompt (HARD RULE — always on)
-
 Passing `visual_dna_ids` is **not enough**. For every DNA in that array you MUST also write `@ExactStoredName` in the prompt text (the `name` from `list_visual_dnas` / `create_visual_dna`). The engine binds identity by parsing `@tags`. No `@tag` → the DNA is wasted.
 
 - Right: `visual_dna_ids: ["vdna_…"]` + prompt `@Zohar walks into frame`

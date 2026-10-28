@@ -96,7 +96,6 @@ Dependencies accumulate: narrative Elements work requires **Kolbo + filmmaking +
 | Film / episode / connected scene | — | `references/filmmaking.md` + `production-planning.md` |
 
 ## ⚠️ Visual DNA `@Name` in the prompt (HARD RULE — always on)
-
 Passing `visual_dna_ids` is **not enough**. For every DNA in that array you MUST also write `@ExactStoredName` in the prompt text (the `name` from `list_visual_dnas` / `create_visual_dna`). The engine binds identity by parsing `@tags`. No `@tag` → the DNA is wasted.
 
 - Right: `visual_dna_ids: ["vdna_…"]` + prompt `@Zohar walks into frame`
@@ -187,7 +186,6 @@ Chat renders markdown natively. `![alt](url)` = inline image. `[label](url)` = l
 **Never update `.kolbo/production.md` merely because a generation succeeded.** Keep the result provisional in the generation card / Library, ask the user to choose, and write only the explicitly approved winner in the same turn as approval. Brief approval before generation is not output approval; silence, a topic change, or requesting the next task is not approval. See `references/production-log.md`.
 
 ## Available MCP Tools
-
 For music composition/reference/section edits, extensions and covers, Trends and Motion Library, Morphious Styles, Creative Director status, project copies and transfer responses, read `references/tool-operations.md`. For editable video timelines, read `references/video-editor.md`. Use `get_video_editor_schema`, `list_video_editor_sessions`, `get_video_editor_session`, `create_video_editor_session`, `update_video_editor_session`, and `export_video_editor_session`. Edit existing sessions in place using their saved revision; do not recreate them to rename or change clips.
 
 For personal font uploads, font selection, or reuse, read `references/personal-fonts.md`. Use the dedicated My Fonts tools; never the media-upload path or agent-rendered specimens.
