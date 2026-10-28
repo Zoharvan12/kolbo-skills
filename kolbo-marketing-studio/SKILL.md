@@ -34,8 +34,7 @@ Honor explicit models, presets, budget and inputs. Choose only eligible catalog 
 Default images and edits: GPT Image 2.5 Flare/Sunburst; medium for value, high for ordinary maximum quality. Reserve xhigh/max for exceptional dense or difficult multilingual text after medium/high prove insufficient; do not automatically spend on retries. Nano Banana 2 is secondary. Seedream 5.0 Pro favors cinematic aesthetics over complex instruction fidelity; Wan 2.7 Pro is another creative alternative. Z Image/P Image for cheap tests. Midjourney for artistic concepts only, never editing. Soul V2 for realistic people/UGC concepts; derive character sheets before registering finished Visual DNA. Mirage Film 2 for environments and cinematic inspiration.
 **Seedance 2.5 Draft:** explicitly pass `model: "seedance-2-5", draft: true` (or legacy `resolution: "480p-draft"`) on the matching video generation tool. Plain `480p` is regular video, never Draft. Use ordinary credits. Finalize a saved draft via `edit_video` `draft_quote` then authorized `draft_enhance`, with its video URL, original project and quoted supported resolution; do not regenerate the prompt. See `references/seedance25.md`.
 For Draft video editing, use `generate_video_from_video` with `model: "seedance-2-5-video-to-video", draft: true`. The source duration and aspect ratio are inherited. Draft uses regular edit 480p pricing; optional finalization uses regular edit 1080p pricing, both charging combined input/output seconds. Read the live catalog and quote rather than hardcoding prices. This app-credit/MCP route does not imply USD-wallet video-edit execution availability.
-
-Default video: Seedance 2.5 for general cinematic work (not Hebrew speech). Kling specializes in controlled single-image and first/last-frame shots. Wan 3.0 specializes in motion graphics and animated typography — native Hebrew speech is poor; attached-audio lip-sync works well. MiniMax H3 offers higher resolution and strong attached-audio lip-sync; H3 Max favors speed at lower resolution with the same audio lip-sync strength. **Native Hebrew dialogue:** Gemini Omni Flash 1.1 or Gemini Omni 1 (best). Seedance 2 / 2.5 do not speak Hebrew — use Latin transliteration in quotes on Seedance, or switch to Gemini Omni. Grok Imagine 1.5 and Seedance 2.0 are non-Hebrew alternatives. P Video/Draft for cheap fast tests. Use base, edit or extend variants only with their required inputs.
+Default video: Seedance 2.5 for general cinematic work (not Hebrew speech). Kling specializes in controlled single-image and first/last-frame shots. Wan 3.0 specializes in motion graphics and animated typography — native Hebrew speech is poor; attached-audio lip-sync works well. It is also the proven **talking-avatar tool**: a person's Visual DNA plus 2 real face photos plus their own voice as `@Audio 1` gives 0.99 voice sync, holds their identity and works in any environment (`references/talking-avatar-wan3.md`, 2026-10-28). MiniMax H3 offers higher resolution and strong attached-audio lip-sync; H3 Max favors speed at lower resolution with the same audio lip-sync strength. **Native Hebrew dialogue:** Gemini Omni Flash 1.1 or Gemini Omni 1 (best). Seedance 2 / 2.5 do not speak Hebrew — use Latin transliteration in quotes on Seedance, or switch to Gemini Omni. Grok Imagine 1.5 and Seedance 2.0 are non-Hebrew alternatives. P Video/Draft for cheap fast tests. Use base, edit or extend variants only with their required inputs.
 Existing-video lip-sync: Sync 3 for active-speaker handling; PixVerse for cartoons/2D and economical faster work. Portrait lip-sync: Veed Fabric or HeyGen Avatar; P Avatar for budget work. LTX Audio to Video for camera/environment motion with audio-driven performance.
 Default music: Suno v6. ElevenLabs Music is an alternative, especially for duration-directed scoring. Both accept custom duration requests; validate the selected tool schema and inspect actual output duration.
 
@@ -180,11 +179,8 @@ Four surfaces show the same job. Use this map — never invent a fifth:
 ## ⚠️ Generated URLs in Chat (CRITICAL)
 
 Chat renders markdown natively. `![alt](url)` = inline image. `[label](url)` = labeled link with preview.
-
 - **Catalog-style replies** (numbered lists of characters / scenes / products): embed `![alt](url)` so each item shows inline.
-- **Conversational replies** ("4 shots ready"): keep prose short; Library already shows the gallery.
-
-Avoid bare URL dumps and HTML `<table>` grids — Library already provides a gallery.
+- **Conversational replies** ("4 shots ready"): keep prose short. Avoid bare URL dumps and HTML `<table>` grids — Library already provides a gallery.
 
 **After `generate_creative_director` completes** — share results as individual URLs, one per scene. Do NOT create an HTML grid artifact.
 
@@ -447,6 +443,7 @@ Audio: full mix — dialogue + score + SFX. Music: {genre/tempo}.
 - [production-log](references/production-log.md)
 - [production-planning](references/production-planning.md)
 - [prompt-structure](references/prompt-structure.md)
+- [talking-avatar-wan3](references/talking-avatar-wan3.md)
 - [thumbnails](references/thumbnails.md)
 - [troubleshooting](references/troubleshooting.md)
 - [ugc-smartphone](references/ugc-smartphone.md)
