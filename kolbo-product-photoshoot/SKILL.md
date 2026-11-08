@@ -1,5 +1,5 @@
 ---
-version: 0.9.25
+version: 0.9.26
 name: kolbo-product-photoshoot
 description: |
   Generate brand-quality product images across 10 specialized modes:
@@ -31,7 +31,7 @@ allowed-tools: Bash, Read, Write, Edit
 
 ## Media selection preferences
 Honor explicit models, presets, budget and inputs. Choose only eligible catalog candidates with all required capabilities. Use requested presets; otherwise use fitting presets when useful. For video generation, editing and lip-sync, when the user has not explicitly selected an output resolution, use the cheapest supported output resolution from the live catalog and pass it explicitly; do not inherit an expensive provider default. Preserve explicit user-selected resolution/settings. Finish fully, cinematic, professional, final, production and available credits are NOT permission to increase resolution. Never infer output resolution from reference media or export settings. A budget is a ceiling, not a spending target. Do not upscale or regenerate at a higher tier without explicit user authorization. If pricing or supported resolutions cannot be verified, inspect the catalog before dispatch; never invent a tier. Models with fixed output resolution use their native output. Never treat a policy refusal as a technical failure or route around safeguards.
-Default images and edits: GPT Image 2.5 Flare/Sunburst; medium for value, high for ordinary maximum quality. Reserve xhigh/max for exceptional dense or difficult multilingual text after medium/high prove insufficient; do not automatically spend on retries. Nano Banana 2 is secondary. Seedream 5.0 Pro favors cinematic aesthetics over complex instruction fidelity; Wan 2.7 Pro is another creative alternative. Z Image/P Image for cheap tests. Midjourney for artistic concepts only, never editing. Soul V2 for realistic people/UGC concepts; derive character sheets before registering finished Visual DNA. Mirage Film 2 for environments and cinematic inspiration.
+Default images and edits: the latest GPT Image, now GPT Image 2.6 Flare (fast, everyday) / Sunburst (precise detail, consistent edits); medium for value, high for ordinary maximum quality. Older GPT Image 2.5 / 2 only when named. For no background, animated GIF or SVG use 2.6 natively (`background: "transparent"`, `output_format: "gif"` / `"svg"`); never fake them with prompt words or HTML. Reserve xhigh/max for exceptional dense or difficult multilingual text after medium/high prove insufficient; do not automatically spend on retries. Nano Banana 2.1 (latest Flash; Nano Banana 2 only when named) is secondary. Seedream 5.0 Pro favors cinematic aesthetics over complex instruction fidelity; Wan 2.7 Pro is another creative alternative. Z Image/P Image for cheap tests. Midjourney for artistic concepts only, never editing. Soul V2 for realistic people/UGC concepts; derive character sheets before registering finished Visual DNA. Mirage Film 2 for environments and cinematic inspiration.
 **Seedance 2.5 Draft:** explicitly pass `model: "seedance-2-5", draft: true` (or legacy `resolution: "480p-draft"`) on the matching video generation tool. Plain `480p` is regular video, never Draft. Use ordinary credits. Finalize a saved draft via `edit_video` `draft_quote` then authorized `draft_enhance`, with its video URL, original project and quoted supported resolution; do not regenerate the prompt. See `references/seedance25.md`.
 For Draft video editing, use `generate_video_from_video` with `model: "seedance-2-5-video-to-video", draft: true`. The source duration and aspect ratio are inherited. Draft uses regular edit 480p pricing; optional finalization uses regular edit 1080p pricing, both charging combined input/output seconds. Read the live catalog and quote rather than hardcoding prices. This app-credit/MCP route does not imply USD-wallet video-edit execution availability.
 Default video: Seedance 2.5 for general cinematic work (not Hebrew speech). Kling specializes in controlled single-image and first/last-frame shots. Wan 3.0 specializes in motion graphics and animated typography — native Hebrew speech is poor; attached-audio lip-sync works well. It is also the proven **talking-avatar tool**: a person's Visual DNA plus 2 real face photos plus their own voice as `@Audio 1` gives 0.99 voice sync, holds their identity and works in any environment (`references/talking-avatar-wan3.md`, 2026-10-28). MiniMax H3 offers higher resolution and strong attached-audio lip-sync; H3 Max favors speed at lower resolution with the same audio lip-sync strength. **Native Hebrew dialogue:** Gemini Omni Flash 1.1 or Gemini Omni 1 (best). Seedance 2 / 2.5 do not speak Hebrew — use Latin transliteration in quotes on Seedance, or switch to Gemini Omni. Grok Imagine 1.5 and Seedance 2.0 are non-Hebrew alternatives. P Video/Draft for cheap fast tests. Use base, edit or extend variants only with their required inputs.
@@ -235,16 +235,16 @@ The mode determines which Kolbo MCP tool to call and what defaults to use.
 
 | Mode | Primary tool | Model preference | aspect_ratio | Count default |
 |---|---|---|---|---|
-| `product_shot` | `generate_image` | GPT Image 2 (clean studio look + dense label text) | `1:1` | 1 or `num_images: 3` for variants |
-| `lifestyle_scene` | `generate_image` | Nano Banana 2 (best lifestyle realism) | `1:1` or `4:5` | 1 or `num_images: 3` |
-| `closeup_product_with_person` | `generate_image` | Nano Banana 2 | `1:1` or `4:5` | 1 |
-| `moodboard_pin` | `generate_image` | Nano Banana 2 | **`2:3`** (Pinterest native) | 1 or `num_images: 3` |
-| `hero_banner` | `generate_image` | GPT Image 2 (large format + brand text) | `16:9` or `3:1` | 1 |
-| `social_carousel` | **`generate_creative_director`** with `scene_count: 3–10` | Nano Banana 2 | `1:1` (IG) or `4:5` | `scene_count` |
-| `ad_creative_pack` | **`generate_creative_director`** with `scene_count: 4–8` | GPT Image 2 or Nano Banana 2 | Mixed per ad placement (`1:1`, `9:16`, `1.91:1`) — fire one director call per aspect | `scene_count` |
+| `product_shot` | `generate_image` | GPT Image 2.6 Sunburst (clean studio look + dense label text; `background: "transparent"` for a cutout) | `1:1` | 1 or `num_images: 3` for variants |
+| `lifestyle_scene` | `generate_image` | Nano Banana 2.1 (best lifestyle realism) | `1:1` or `4:5` | 1 or `num_images: 3` |
+| `closeup_product_with_person` | `generate_image` | Nano Banana 2.1 | `1:1` or `4:5` | 1 |
+| `moodboard_pin` | `generate_image` | Nano Banana 2.1 | **`2:3`** (Pinterest native) | 1 or `num_images: 3` |
+| `hero_banner` | `generate_image` | GPT Image 2.6 Sunburst (large format + brand text) | `16:9` or `3:1` | 1 |
+| `social_carousel` | **`generate_creative_director`** with `scene_count: 3–10` | Nano Banana 2.1 | `1:1` (IG) or `4:5` | `scene_count` |
+| `ad_creative_pack` | **`generate_creative_director`** with `scene_count: 4–8` | GPT Image 2.6 or Nano Banana 2.1 | Mixed per ad placement (`1:1`, `9:16`, `1.91:1`) — fire one director call per aspect | `scene_count` |
 | `virtual_model_tryout` | `generate_image_edit` with character Visual DNA + product source | Nano Banana Pro (identity-sensitive edits) | `1:1`, `4:5`, or `9:16` | 1–3 |
-| `conceptual_product` | `generate_image` | Nano Banana 2 or GPT Image 2 | `1:1` or `2:3` | 1–4 |
-| `restyle` | `generate_image_edit` with `source_images: [existing]` | Same model that produced the original (or Nano Banana 2 for safe re-render) | Inherit from source | 1–3 |
+| `conceptual_product` | `generate_image` | Nano Banana 2.1 or GPT Image 2.6 | `1:1` or `2:3` | 1–4 |
+| `restyle` | `generate_image_edit` with `source_images: [existing]` | Same model that produced the original (or Nano Banana 2.1 for safe re-render) | Inherit from source | 1–3 |
 
 **For multi-output modes** (`social_carousel`, `ad_creative_pack`), always use `generate_creative_director` — never fire ≥2 `generate_image` calls in a loop. See `models/creative-director.md`.
 

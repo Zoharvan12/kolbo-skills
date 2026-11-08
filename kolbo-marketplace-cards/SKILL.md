@@ -1,5 +1,5 @@
 ---
-version: 0.9.25
+version: 0.9.26
 name: kolbo-marketplace-cards
 description: |
   Generate marketplace listing visuals for Amazon / Shopify / eBay / Etsy /
@@ -30,7 +30,7 @@ allowed-tools: Bash, Read, Write, Edit
 
 ## Media selection preferences
 Honor explicit models, presets, budget and inputs. Choose only eligible catalog candidates with all required capabilities. Use requested presets; otherwise use fitting presets when useful. For video generation, editing and lip-sync, when the user has not explicitly selected an output resolution, use the cheapest supported output resolution from the live catalog and pass it explicitly; do not inherit an expensive provider default. Preserve explicit user-selected resolution/settings. Finish fully, cinematic, professional, final, production and available credits are NOT permission to increase resolution. Never infer output resolution from reference media or export settings. A budget is a ceiling, not a spending target. Do not upscale or regenerate at a higher tier without explicit user authorization. If pricing or supported resolutions cannot be verified, inspect the catalog before dispatch; never invent a tier. Models with fixed output resolution use their native output. Never treat a policy refusal as a technical failure or route around safeguards.
-Default images and edits: GPT Image 2.5 Flare/Sunburst; medium for value, high for ordinary maximum quality. Reserve xhigh/max for exceptional dense or difficult multilingual text after medium/high prove insufficient; do not automatically spend on retries. Nano Banana 2 is secondary. Seedream 5.0 Pro favors cinematic aesthetics over complex instruction fidelity; Wan 2.7 Pro is another creative alternative. Z Image/P Image for cheap tests. Midjourney for artistic concepts only, never editing. Soul V2 for realistic people/UGC concepts; derive character sheets before registering finished Visual DNA. Mirage Film 2 for environments and cinematic inspiration.
+Default images and edits: the latest GPT Image, now GPT Image 2.6 Flare (fast, everyday) / Sunburst (precise detail, consistent edits); medium for value, high for ordinary maximum quality. Older GPT Image 2.5 / 2 only when named. For no background, animated GIF or SVG use 2.6 natively (`background: "transparent"`, `output_format: "gif"` / `"svg"`); never fake them with prompt words or HTML. Reserve xhigh/max for exceptional dense or difficult multilingual text after medium/high prove insufficient; do not automatically spend on retries. Nano Banana 2.1 (latest Flash; Nano Banana 2 only when named) is secondary. Seedream 5.0 Pro favors cinematic aesthetics over complex instruction fidelity; Wan 2.7 Pro is another creative alternative. Z Image/P Image for cheap tests. Midjourney for artistic concepts only, never editing. Soul V2 for realistic people/UGC concepts; derive character sheets before registering finished Visual DNA. Mirage Film 2 for environments and cinematic inspiration.
 **Seedance 2.5 Draft:** explicitly pass `model: "seedance-2-5", draft: true` (or legacy `resolution: "480p-draft"`) on the matching video generation tool. Plain `480p` is regular video, never Draft. Use ordinary credits. Finalize a saved draft via `edit_video` `draft_quote` then authorized `draft_enhance`, with its video URL, original project and quoted supported resolution; do not regenerate the prompt. See `references/seedance25.md`.
 For Draft video editing, use `generate_video_from_video` with `model: "seedance-2-5-video-to-video", draft: true`. The source duration and aspect ratio are inherited. Draft uses regular edit 480p pricing; optional finalization uses regular edit 1080p pricing, both charging combined input/output seconds. Read the live catalog and quote rather than hardcoding prices. This app-credit/MCP route does not imply USD-wallet video-edit execution availability.
 Default video: Seedance 2.5 for general cinematic work (not Hebrew speech). Kling specializes in controlled single-image and first/last-frame shots. Wan 3.0 specializes in motion graphics and animated typography — native Hebrew speech is poor; attached-audio lip-sync works well. It is also the proven **talking-avatar tool**: a person's Visual DNA plus 2 real face photos plus their own voice as `@Audio 1` gives 0.99 voice sync, holds their identity and works in any environment (`references/talking-avatar-wan3.md`, 2026-10-28). MiniMax H3 offers higher resolution and strong attached-audio lip-sync; H3 Max favors speed at lower resolution with the same audio lip-sync strength. **Native Hebrew dialogue:** Gemini Omni Flash 1.1 or Gemini Omni 1 (best). Seedance 2 / 2.5 do not speak Hebrew — use Latin transliteration in quotes on Seedance, or switch to Gemini Omni. Grok Imagine 1.5 and Seedance 2.0 are non-Hebrew alternatives. P Video/Draft for cheap fast tests. Use base, edit or extend variants only with their required inputs.
@@ -215,19 +215,19 @@ Use a **custom subset** of the asset list below when the user wants a non-standa
 
 | Asset | Purpose | Aspect ratio | Model preference |
 |---|---|---|---|
-| `main_image` | Marketplace thumbnail — strict compliance: pure white bg, product fills 85% of frame, no text, no props | `1:1` | Nano Banana 2 (clean studio render) |
-| `infographic` | Feature callouts with text labels and product hero | `1:1` or `4:5` | **GPT Image 2** (dense on-image text) |
-| `multi_angle` | 4-up grid showing front / back / sides of product | `1:1` | Nano Banana 2 |
-| `detail_shot` | Macro shot of texture / material / mechanism | `1:1` | Nano Banana 2 |
-| `lifestyle` | Product in use in real environment | `1:1` or `4:5` | Nano Banana 2 |
-| `whats_in_box` | Flat-lay showing the product + accessories laid out neatly | `1:1` | Nano Banana 2 |
-| `aplus_hero_banner` | Wide A+ header — brand identity hit | `3:1` | GPT Image 2 |
-| `aplus_pain_points` | 3-up grid showing the problem this product solves | `16:9` | GPT Image 2 (text) |
-| `aplus_features` | 3-up or 4-up feature breakdown with labels | `16:9` | GPT Image 2 |
-| `aplus_ingredients` | Ingredients / materials breakdown (skincare, food, supplements) | `16:9` | GPT Image 2 |
-| `aplus_efficacy` | Before/after, % stats, clinical results — proof block | `16:9` | GPT Image 2 (charts + text) |
-| `aplus_how_to_use` | Numbered step-by-step usage instructions | `16:9` | GPT Image 2 |
-| `aplus_endorsement` | Founder story, brand mission, testimonial-style | `16:9` | Nano Banana 2 (people) + GPT Image 2 (text overlay) |
+| `main_image` | Marketplace thumbnail — strict compliance: pure white bg, product fills 85% of frame, no text, no props | `1:1` | Nano Banana 2.1 (clean studio render) |
+| `infographic` | Feature callouts with text labels and product hero | `1:1` or `4:5` | **GPT Image 2.6 Sunburst** (dense on-image text) |
+| `multi_angle` | 4-up grid showing front / back / sides of product | `1:1` | Nano Banana 2.1 |
+| `detail_shot` | Macro shot of texture / material / mechanism | `1:1` | Nano Banana 2.1 |
+| `lifestyle` | Product in use in real environment | `1:1` or `4:5` | Nano Banana 2.1 |
+| `whats_in_box` | Flat-lay showing the product + accessories laid out neatly | `1:1` | Nano Banana 2.1 |
+| `aplus_hero_banner` | Wide A+ header — brand identity hit | `3:1` | GPT Image 2.6 |
+| `aplus_pain_points` | 3-up grid showing the problem this product solves | `16:9` | GPT Image 2.6 (text) |
+| `aplus_features` | 3-up or 4-up feature breakdown with labels | `16:9` | GPT Image 2.6 |
+| `aplus_ingredients` | Ingredients / materials breakdown (skincare, food, supplements) | `16:9` | GPT Image 2.6 |
+| `aplus_efficacy` | Before/after, % stats, clinical results — proof block | `16:9` | GPT Image 2.6 (charts + text) |
+| `aplus_how_to_use` | Numbered step-by-step usage instructions | `16:9` | GPT Image 2.6 |
+| `aplus_endorsement` | Founder story, brand mission, testimonial-style | `16:9` | Nano Banana 2.1 (people) + GPT Image 2.6 (text overlay) |
 
 ### Kolbo MCP Routing
 
@@ -284,7 +284,7 @@ A+ modules tell a story below the fold. Standard 7-module flow:
 6. `aplus_how_to_use` — usage steps
 7. `aplus_endorsement` — founder story / mission / testimonial
 
-For dense-text modules (`aplus_features`, `aplus_pain_points`, `aplus_efficacy`, `aplus_how_to_use`): always recommend **GPT Image 2** at `resolution: "2K"` or `"4K"` (text needs the higher tier to stay sharp).
+For dense-text modules (`aplus_features`, `aplus_pain_points`, `aplus_efficacy`, `aplus_how_to_use`): always recommend **GPT Image 2.6 Sunburst** at `resolution: "2K"` or `"4K"` (text needs the higher tier to stay sharp).
 
 ### Brand Kit Reuse
 
@@ -327,7 +327,7 @@ If the user already has an approved `main_image` from a prior session and wants 
 1. **Always ask which marketplace** — compliance rules vary.
 2. **Strict compliance prompts on main_image** — explicit NO text / NO props / NO models / NO borders.
 3. **Always reuse brand kit** — Read `.kolbo/brand-kits/<slug>.md` first; pass palette + fonts to every A+ module.
-4. **Recommend GPT Image 2 + 2K/4K for dense-text A+ modules** — Nano Banana renders text well but GPT Image 2 wins at multi-line technical layouts.
+4. **Recommend GPT Image 2.6 Sunburst + 2K/4K for dense-text A+ modules** — Nano Banana renders text well but GPT Image wins at multi-line technical layouts.
 5. **For bundles, always use `generate_creative_director`** — never fire 13 parallel `generate_image` calls.
 6. **After approval, log the approved cards to `.kolbo/production.md`** — pending and rejected variants stay out; approved listings can then be reused.
 
