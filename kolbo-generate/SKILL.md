@@ -343,15 +343,14 @@ For MiniMax H3 Max Recast, use its exact live catalog identifier: one 5–30 sec
 
 **Motion-control / animate-move models invert the inputs**: `reference_images[0]` = the CHARACTER IMAGE to animate, `source_video` = the driving/reference video whose motion is transferred. Omitting the character image returns a `MOTION_CONTROL_INPUTS` error. **Do NOT** decompose into frames. **Do NOT** re-fire if the first call returned URLs.
 
-## ⚠️ Character-Driven Video — Frames First, Then Animate (CRITICAL)
+## ⚠️ Character-Driven Video — DNAs + Prompts on Elements (CRITICAL)
 
-For any ad / story / scene-based video **created from scratch** featuring a Visual DNA character (NOT v2v edits):
+For any ad / story / scene-based video **created from scratch** featuring a Visual DNA character, location or product (NOT v2v edits):
 
-1. **Generate the shot frames first** via `generate_creative_director` with `scene_count` + `visual_dna_ids` (image mode). DNA is strongest in image gen; user can approve cheaply.
-2. **Confirm the frames** if >3 shots.
-3. **Animate each frame** with `generate_video_from_image`, fired in parallel.
+1. Attach the cast, location and product DNAs to `generate_elements` (Seedance 2.5, Wan 3.0, Kling).
+2. Write one prompt per scene: action, camera, dialogue. Fire independent scenes in parallel.
 
-Skip frames-first only when the user says "go straight to video", single-shot quick experiments, or the user supplies approved frames. Full rules: `references/creative-director.md`.
+Never generate shot frames or keyframes first and animate them (founder rule, 2026-11-08). Frames come into it only when the user supplies them or asks for images.
 
 ## Limitations & Safety
 
@@ -374,7 +373,6 @@ Skip frames-first only when the user says "go straight to video", single-shot qu
 - [scene-engine](references/scene-engine.md)
 - [validation](references/validation.md)
 - [workflows](references/workflows.md)
-- [creative-director](references/creative-director.md)
 - [gpt-image](references/gpt-image.md)
 - [music](references/music.md)
 - [nano-banana](references/nano-banana.md)
