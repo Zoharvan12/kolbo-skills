@@ -1,5 +1,5 @@
 ---
-version: 0.9.28
+version: 0.9.29
 name: kolbo-filmmaking
 description: |
   Direct AI films end to end — script development, production bible, recurring
