@@ -43,7 +43,8 @@ Craft packs named in the table above (load only what the shot needs):
 [blocking-continuity.md](references/blocking-continuity.md) ·
 [cinematography.md](references/cinematography.md) ·
 [physics-action.md](references/physics-action.md) ·
-[audio-dialogue-music.md](references/audio-dialogue-music.md)
+[audio-dialogue-music.md](references/audio-dialogue-music.md) ·
+[seedance25-craft.md](references/seedance25-craft.md) (live-action Seedance 2.5 takes that read as filmed footage)
 
 For Seedance 2.5, always read [seedance-2-5.md](references/seedance25.md) before final compilation. Treat capability numbers as a dated adapter snapshot and verify them against current provider/catalog truth when real money or production delivery depends on them.
 

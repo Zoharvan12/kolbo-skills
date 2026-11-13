@@ -1,5 +1,5 @@
 ---
-version: 0.9.30
+version: 0.9.31
 name: kolbo-generate
 description: |
   Generate any image / video / music / TTS / sound / 3D content via the Kolbo AI
@@ -188,9 +188,7 @@ Chat renders markdown natively. `![alt](url)` = inline image. `[label](url)` = l
 ## Available MCP Tools
 For music composition/reference/section edits, extensions and covers, Trends and Motion Library, Morphious Styles, Creative Director status, project copies and transfer responses, read `references/tool-operations.md`. For editable video timelines, read `references/video-editor.md`. Use `get_video_editor_schema`, `list_video_editor_sessions`, `get_video_editor_session`, `create_video_editor_session`, `update_video_editor_session`, and `export_video_editor_session`. Edit existing sessions in place using their saved revision; do not recreate them to rename or change clips.
 
-For personal font uploads, font selection, or reuse, read `references/personal-fonts.md`. Use the dedicated My Fonts tools; never the media-upload path or agent-rendered specimens.
-
-Font tools (when exposed by the installed MCP): `list_fonts`, `get_font`, `upload_font`, `get_font_upload_status`, `create_font_upload_ticket`, `font_upload_widget`, `rename_font`, `delete_font`. Image creation/editing and image-mode Creative Director accept `font_ids` only on models with `supports_custom_fonts`.
+For personal font uploads, font selection, or reuse, read `references/personal-fonts.md`. Use the dedicated My Fonts tools; never the media-upload path or agent-rendered specimens. Font tools (when exposed by the installed MCP): `list_fonts`, `get_font`, `upload_font`, `get_font_upload_status`, `create_font_upload_ticket`, `font_upload_widget`, `rename_font`, `delete_font`. Image creation/editing and image-mode Creative Director accept `font_ids` only on models with `supports_custom_fonts`.
 
 ### Generation
 | Tool | Description |
@@ -371,6 +369,7 @@ Never generate shot frames or keyframes first and animate them (founder rule, 20
 - [prompt-contracts](references/prompt-contracts.md)
 - [routing](references/routing.md)
 - [scene-engine](references/scene-engine.md)
+- [seedance25-craft](references/seedance25-craft.md)
 - [validation](references/validation.md)
 - [workflows](references/workflows.md)
 - [gpt-image](references/gpt-image.md)

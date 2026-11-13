@@ -1,5 +1,5 @@
 ---
-version: 0.9.30
+version: 0.9.31
 name: kolbo-marketing-studio
 description: |
   Generate branded ad VIDEO — UGC, unboxing, tutorial, product review, TV spot,
@@ -419,6 +419,7 @@ Audio: full mix — dialogue + score + SFX. Music: {genre/tempo}.
 - [prompt-contracts](references/prompt-contracts.md)
 - [routing](references/routing.md)
 - [scene-engine](references/scene-engine.md)
+- [seedance25-craft](references/seedance25-craft.md)
 - [validation](references/validation.md)
 - [workflows](references/workflows.md)
 - [gpt-image](references/gpt-image.md)

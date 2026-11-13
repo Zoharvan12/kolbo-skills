@@ -1,5 +1,5 @@
 ---
-version: 0.9.30
+version: 0.9.31
 name: kolbo-visual-dna
 description: |
   Train a Visual DNA — a personalized model that captures the visual identity
@@ -490,6 +490,7 @@ These are multi-panel grids laid out side by side — front, back, left, right, 
 - [prompt-contracts](references/prompt-contracts.md)
 - [routing](references/routing.md)
 - [scene-engine](references/scene-engine.md)
+- [seedance25-craft](references/seedance25-craft.md)
 - [validation](references/validation.md)
 - [workflows](references/workflows.md)
 - [gpt-image](references/gpt-image.md)

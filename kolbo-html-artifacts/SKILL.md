@@ -1,5 +1,5 @@
 ---
-version: 0.9.30
+version: 0.9.31
 name: kolbo-html-artifacts
 description: |
   Build distinctive, production-grade HTML artifacts — slide decks /
@@ -335,6 +335,7 @@ After the user approves the deck, offer `publish_html_artifact({ title, content 
 - [prompt-contracts](references/prompt-contracts.md)
 - [routing](references/routing.md)
 - [scene-engine](references/scene-engine.md)
+- [seedance25-craft](references/seedance25-craft.md)
 - [validation](references/validation.md)
 - [workflows](references/workflows.md)
 - [gpt-image](references/gpt-image.md)

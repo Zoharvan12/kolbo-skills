@@ -1,5 +1,5 @@
 ---
-version: 0.9.30
+version: 0.9.31
 name: kolbo-music
 description: |
   Generate music via Kolbo — primarily Suno + variants. Full songs, lyrics,
@@ -351,6 +351,7 @@ If the user is in any language other than English, explanations in their languag
 - [prompt-contracts](references/prompt-contracts.md)
 - [routing](references/routing.md)
 - [scene-engine](references/scene-engine.md)
+- [seedance25-craft](references/seedance25-craft.md)
 - [validation](references/validation.md)
 - [workflows](references/workflows.md)
 - [gpt-image](references/gpt-image.md)

@@ -10,7 +10,7 @@
       "name": "kolbo",
       "source": "./",
       "description": "Image/video generation, Marketing Studio, product photoshoot, marketplace cards, Visual DNA, Creative Director, HTML artifacts, Micro-Drama Studio.",
-      "version": "0.9.30",
+      "version": "0.9.31",
       "skills": [
         {
           "name": "generate",
@@ -71,6 +71,11 @@
           "name": "micro-drama",
           "path": "kolbo-micro-drama",
           "invoke": "/kolbo:micro-drama"
+        },
+        {
+          "name": "viral-recreate",
+          "path": "kolbo-viral-recreate",
+          "invoke": "/kolbo:viral-recreate"
         }
       ]
     }
