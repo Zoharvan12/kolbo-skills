@@ -1,5 +1,5 @@
 ---
-version: 0.9.33
+version: 0.9.34
 name: kolbo-viral-recreate
 description: |
   Recreate the format of a viral reel, TikTok or Short with Kolbo: the user

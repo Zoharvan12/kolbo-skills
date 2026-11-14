@@ -1,5 +1,5 @@
 ---
-version: 0.9.33
+version: 0.9.34
 name: kolbo-dtc-ads
 description: |
   Compose a brand ad IMAGE from 5 building blocks: brand kit + ad format

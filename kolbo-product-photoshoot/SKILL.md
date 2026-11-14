@@ -1,5 +1,5 @@
 ---
-version: 0.9.33
+version: 0.9.34
 name: kolbo-product-photoshoot
 description: |
   Generate brand-quality product images across 10 specialized modes:
