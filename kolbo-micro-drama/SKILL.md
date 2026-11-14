@@ -1,5 +1,5 @@
 ---
-version: 0.9.32
+version: 0.9.33
 name: kolbo-micro-drama
 description: |
   Create a vertical micro-drama or short-form drama series in Kolbo.AI,
@@ -20,14 +20,14 @@ allowed-tools: Bash, Read, Write, Edit
 ## Media selection preferences
 Honor explicit models, presets, budget and inputs. Choose only eligible catalog candidates with all required capabilities. Use requested presets; otherwise use fitting presets when useful. For video generation, editing and lip-sync, when the user has not explicitly selected an output resolution, use the cheapest supported output resolution from the live catalog and pass it explicitly; do not inherit an expensive provider default. Preserve explicit user-selected resolution/settings. Finish fully, cinematic, professional, final, production and available credits are NOT permission to increase resolution. Never infer output resolution from reference media or export settings. A budget is a ceiling, not a spending target. Do not upscale or regenerate at a higher tier without explicit user authorization. If pricing or supported resolutions cannot be verified, inspect the catalog before dispatch; never invent a tier. Models with fixed output resolution use their native output. Never treat a policy refusal as a technical failure or route around safeguards.
 Default images and edits: the latest GPT Image, now GPT Image 2.6 Flare (fast, everyday) / Sunburst (precise detail, consistent edits); medium for value, high for ordinary maximum quality. Older GPT Image 2.5 / 2 only when named. For no background, animated GIF or SVG use 2.6 natively (`background: "transparent"`, `output_format: "gif"` / `"svg"`); never fake them with prompt words or HTML. Reserve xhigh/max for exceptional dense or difficult multilingual text after medium/high prove insufficient; do not automatically spend on retries. Nano Banana 2.1 (latest Flash; Nano Banana 2 only when named) is secondary. Seedream 5.0 Pro favors cinematic aesthetics over complex instruction fidelity; Wan 2.7 Pro is another creative alternative. Z Image/P Image for cheap tests. Midjourney for artistic concepts only, never editing. Soul V2 for realistic people/UGC concepts; derive character sheets before registering finished Visual DNA. Mirage Film 2 for environments and cinematic inspiration.
+**Real-looking examples (Zohar 2026-10-19).** Real people go to Soul 2 (`soul/v2/standard`), or sometimes Midjourney; cinematic shots go to Seedream 5 Pro. Write prompts with specific lived-in details, available light and phone or 35mm film language. Never use generic "premium e-commerce, studio lighting" prompts: on nano-banana-2 they read as "really fake, gross". When realism matters, run two models on the same prompts, compare on a contact sheet and keep the most real.
 **Seedance 2.5 Draft:** explicitly pass `model: "seedance-2-5", draft: true` (or legacy `resolution: "480p-draft"`) on the matching video generation tool. Plain `480p` is regular video, never Draft. Use ordinary credits. Finalize a saved draft via `video_tools` `draft_quote` then authorized `draft_enhance`, with its video URL, original project and quoted supported resolution; do not regenerate the prompt. See `references/seedance25.md`.
 For Draft video editing, use `generate_video_from_video` with `model: "seedance-2-5-video-to-video", draft: true`. The source duration and aspect ratio are inherited. Draft uses regular edit 480p pricing; optional finalization uses regular edit 1080p pricing, both charging combined input/output seconds. Read the live catalog and quote rather than hardcoding prices. This app-credit/MCP route does not imply USD-wallet video-edit execution availability.
-Default video: Seedance 2.5 for general cinematic work (not Hebrew speech). Kling specializes in controlled single-image and first/last-frame shots. Wan 3.0 specializes in motion graphics and animated typography — native Hebrew speech is poor; attached-audio lip-sync works well. It is also the proven **talking-avatar tool**: a person's Visual DNA plus 2 real face photos plus their own voice as `@Audio 1` gives 0.99 voice sync, holds their identity and works in any environment (`references/talking-avatar-wan3.md`, 2026-10-28). MiniMax H3 offers higher resolution and strong attached-audio lip-sync; H3 Max favors speed at lower resolution with the same audio lip-sync strength. **Native Hebrew dialogue:** Gemini Omni Flash 1.1 or Gemini Omni 1 (best). Seedance 2 / 2.5 do not speak Hebrew — use Latin transliteration in quotes on Seedance, or switch to Gemini Omni. Grok Imagine 1.5 and Seedance 2.0 are non-Hebrew alternatives. P Video/Draft for cheap fast tests. Use base, edit or extend variants only with their required inputs.
+Default video: Seedance 2.5 for general cinematic work (not Hebrew speech); for narrative film use `references/directing-document.md`, whose rules are proven on Seedance only (§6 there says what transfers to Kling, Wan 3 and Veo). Kling specializes in controlled single-image and first/last-frame shots (the Kling-based Cinema Studio film CUPID started every video from a designed still). Wan 3.0 specializes in motion graphics and animated typography — native Hebrew speech is poor; attached-audio lip-sync works well. It is also the proven **talking-avatar tool**: a person's Visual DNA plus 2 real face photos plus their own voice as `@Audio 1` gives 0.99 voice sync, holds their identity and works in any environment (`references/talking-avatar-wan3.md`, 2026-10-28). MiniMax H3 offers higher resolution and strong attached-audio lip-sync; H3 Max favors speed at lower resolution with the same audio lip-sync strength. **Native Hebrew dialogue:** Gemini Omni Flash 1.1 or Gemini Omni 1 (best). Seedance 2 / 2.5 do not speak Hebrew — use Latin transliteration in quotes on Seedance, or switch to Gemini Omni. Grok Imagine 1.5 and Seedance 2.0 are non-Hebrew alternatives. P Video/Draft for cheap fast tests. Use base, edit or extend variants only with their required inputs.
 Existing-video lip-sync: Sync 3 for active-speaker handling; PixVerse for cartoons/2D and economical faster work. Portrait lip-sync: Veed Fabric or HeyGen Avatar; P Avatar for budget work. LTX Audio to Video for camera/environment motion with audio-driven performance.
 Default music: Suno v6. ElevenLabs Music is an alternative, especially for duration-directed scoring. Both accept custom duration requests; validate the selected tool schema and inspect actual output duration.
 
 ## Step 0 — Bootstrap
-
 Once per conversation, before any other Kolbo tool call:
 
 1. **Run `check_credits`.** If it fails with "Session expired" / "Not authenticated", ask the user to run `kolbo auth login` (or their branded CLI command like `sapir auth login`) and reload the editor.
@@ -37,6 +37,7 @@ Once per conversation, before any other Kolbo tool call:
 If the user is on a whitelabel build (`sapir`, etc.), they must use their branded command — not `kolbo`. See `references/troubleshooting.md`.
 
 ## 🎬 Confirm the Creative Brief & Cost BEFORE Generating (CRITICAL — read first)
+**Kobi inside the Kolbo app: skip this whole section.** The request authorizes the work and `submit_plan` is the only approval. Never ask "should I go ahead?"; pick sensible defaults, call `submit_plan` and make it.
 
 Never fire a paid generation the moment the user says "make X". First **present the brief back as a confirmation the user can change** — this is the single most important interaction. It gives the user control over what gets created and what it costs, instead of silently spending credits on defaults.
 
@@ -64,7 +65,6 @@ Then generate **only** with the confirmed parameters. If the user changes an opt
 For multi-scene / batch work this pairs with `generate_creative_director` (see below) — still confirm the brief first.
 
 ## ⚠️ Load the matching skill BEFORE generating (HARD RULE)
-
 This `kolbo` skill is the mandatory first layer for every Kolbo media task. Do **not** call `generate_*` / `generate_elements` / `generate_image_edit`, or write the billable prompt for them, until you have loaded every matching dependency **in this turn** (the `skill` tool for bundled skills and Read of the required Kolbo references). "I already know this," memory, or a prior-turn load does not count. Users will never invoke these skills themselves.
 
 Dependencies accumulate: narrative Elements work requires **Kolbo + filmmaking + elements-prompting**, not whichever one was loaded first. Before the first paid call, silently check the stack and load anything missing.
@@ -101,7 +101,6 @@ Resolve names with `list_visual_dnas` first. Full binding rules: `references/vis
 **Every still on a DNA can reach the model.** Kolbo now sends all of a DNA's reference images that fit the model's image-slot cap (user uploads first, then one still per DNA, then leftovers round-robin). If a DNA only gets one leftover slot and has no real character sheet, unused stills become a white grid. Mixed-vibe stills or environment photos that contain a main character will confuse the generation — keep each DNA surgically clean. Create-and-pack rules: `references/visual-dna.md`.
 
 ## 📁 Projects — Where Work Lands (CRITICAL)
-
 Everything in Kolbo — sessions, generations, media, docs — lives inside a PROJECT. Getting this wrong is the #1 user complaint ("my work went to the wrong project").
 
 1. **User names a project** ("in my Acme project", "for the film") → call `list_projects` ONCE to resolve the name to an ObjectId, then pass that **same** id as `project_id` on **EVERY** subsequent `generate_*` / `upload_media` / `create_doc` / `chat_send_message` call in **this conversation**. There is no server-side sticky store — omitting it on any later call silently lands in the default "API Generations" bucket (`is_default: true`). Once resolved, treat that id as required for the rest of the conversation. Accounts often hold hundreds of projects, so pass `list_projects({ search: "acme" })` rather than listing everything; the list is paginated (50/page) and hides archived projects unless you pass `include_archived: true`. When the user starts new work, `create_project` first, then pass its id the same way.
@@ -109,7 +108,6 @@ Everything in Kolbo — sessions, generations, media, docs — lives inside a PR
 3. **Work landed in the wrong project? MOVE it, never regenerate**: `move_session` relocates a whole session + all its media (generation sessions and chats; Creative Director, transcription, global_image_edit and shorts sessions return `SESSION_TYPE_NOT_MOVABLE` — move their media with `bulk_move_media` instead); `move_media` / `bulk_move_media` / `move_folder_contents` relocate individual media items. Empty leftover sessions after a move: `delete_session` (soft-delete; `restore_session` undoes it). `rename_session` only changes the sidebar title.
 
 ## ⚠️ One session per plan bucket (HARD RULE)
-
 Omitting `session_id` on a generate call creates a **new** Kolbo sidebar session. Do that only when the **plan** starts a new bucket — not per take, not per shot, not because you just called a tool.
 
 Name buckets from the plan you already showed the user, then `rename_session` on first create:
@@ -131,7 +129,6 @@ How to thread:
 After the user approves a bucket, write its `session_id` + plan name into `.kolbo/production.md` `### Sessions`. Do not create or update the file for a pending bucket. Full rules: `references/production-planning.md` + `production-log.md`.
 
 ## ⚠️ Generation lifecycle — source of truth, waiting, failures (HARD RULE — read this)
-
 **How calls work:** each generation tool blocks until the job is fully complete. Images: seconds. Video: minutes. Multiple tool calls in one response run concurrently. On hosts with live widgets the tool instead returns `submitted` (or `_timed_out`) instantly — the card updates on its own.
 
 Four surfaces show the same job. Use this map — never invent a fifth:
@@ -164,7 +161,6 @@ Four surfaces show the same job. Use this map — never invent a fifth:
 `failure` envelope structure + retry rules: `references/troubleshooting.md`.
 
 ## ⚠️ Generated URLs in Chat (CRITICAL)
-
 Chat renders markdown natively. `![alt](url)` = inline image. `[label](url)` = labeled link with preview.
 - **Catalog-style replies** (numbered lists of characters / scenes / products): embed `![alt](url)` so each item shows inline.
 - **Conversational replies** ("4 shots ready"): keep prose short. Avoid bare URL dumps and HTML `<table>` grids — Library already provides a gallery.
@@ -197,7 +193,11 @@ Ask these before any paid step, with the suggested default first. Store the answ
 
 1. **Idea + genre**: the user's premise, and one of the genre templates in `references/writing.md` (romance/revenge, thriller/mystery, brand series, comedy) or "other".
 2. **Format and season shape**: serial episodes (suggest 6 episodes of 45-90 s, cliffhanger endings) or standalone social reels (one scene of 25-35 s each, payoff endings; see `references/writing.md`), number of posts, aspect (suggest 9:16). Ask whether the user adds their own music in the edit; if so, every prompt stays music-free and each reel keeps a silent stretch for the track.
-3. **Language**: English is the reliable default. Seedance 2.5 performs English dialogue natively. For any other language, tell the user before anything is generated: Seedance 2.5 may not speak it (it does not speak Hebrew at all), and the route is either a model that speaks it natively (check `list_models`) or recorded/generated speech with a lip-sync model, both with their own cost and quality trade-offs. Let the user choose.
+3. **Language**: English is the reliable default. Seedance 2.5 performs English dialogue natively. Video models are weak in Hebrew, so a Hebrew series uses one of two routes (founder, 2026-11-05); explain both in one plain line each and let the user choose:
+   - **A. Wan 3 with real audio:** make each character's Hebrew lines first (`generate_speech`, the character's locked voice), then render the scene on `wan3.0-elements` with the Visual DNAs and those clips as `@AudioN`, and state in the prompt who says which clip and when (timing per line). The lips follow the real audio.
+   - **B. Act it, then lip-sync:** render the scene on Seedance 2.5 with the dialogue written in ENGLISH as emotion and intent per speaker ("Maya, hurt, quietly accuses him"; transliterate only if a line must be heard), then generate the Hebrew lines and lip-sync each one onto its speaker with Sync-3, which can animate only that speaker in the shot.
+   - Either route: when the acting matters, the user can perform the lines and `change_voice` turns each take into the character's voice (`references/voice-acting.md`).
+   Never describe this to the user as "voices for approval" alone: the voice is chosen with the route.
 4. **Look route**: photoreal drama, or a stylized glamour / nostalgic look (Midjourney stills as the look source). See `references/cast-locations-voices.md`.
 5. **Finals**: episodes are always blocked in Seedance 2.5 Draft. Read `draft_resolutions[].final_resolutions` for `seedance-2-5` in `list_models` (as of 2026-10 a Draft finalizes to 1080p only). If there is a choice, ask which tier; if not, tell the user the final tier and its cost per 30 s, and ask whether to finalize at all or deliver the Draft cut.
 6. **Credit cap** for the season (and per episode), quoted against the estimate in `references/render-qa.md`.
@@ -229,6 +229,8 @@ Any agent connected to the Kolbo MCP can run this workflow end to end: Kobi in t
 
 ### Hard rules
 
+- **Elements renders get identities, the prompt gets the scene (founder, 2026-11-05).** Seedance 2.5, Wan 3 and the other Elements models work best when they receive ONLY the Visual DNAs (each character + the location) and the composition, blocking, shots and camera live in the prompt. Never plan "an image of each scene with the characters" as a step before video, and never pass a composed scene still as a reference: it locks the frame and makes the cast look pasted in. A storyboard, if the user asks for one, is for reading only.
+
 - Every character is fictional and a clearly adult (21+), stated in every character prompt and visible on screen. No real-person or celebrity likeness. No famous names or IP in any prompt.
 - Consent is explicit in any romantic or intimate beat. No sexual content; heat stays at the level the user's platforms allow.
 - Never spend over the cap. Never finalize without a quote and a yes.
@@ -242,6 +244,7 @@ Any agent connected to the Kolbo MCP can run this workflow end to end: Kobi in t
 - [audio-dialogue-music](references/audio-dialogue-music.md)
 - [blocking-continuity](references/blocking-continuity.md)
 - [cinematography](references/cinematography.md)
+- [directing-document](references/directing-document.md)
 - [physics-action](references/physics-action.md)
 - [production-bible](references/production-bible.md)
 - [prompt-contracts](references/prompt-contracts.md)
@@ -278,3 +281,4 @@ Any agent connected to the Kolbo MCP can run this workflow end to end: Kobi in t
 - [ugc-smartphone](references/ugc-smartphone.md)
 - [video-editor](references/video-editor.md)
 - [visual-dna](references/visual-dna.md)
+- [voice-acting](references/voice-acting.md)
